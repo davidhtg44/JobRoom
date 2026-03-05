@@ -29,6 +29,7 @@ function showLoginPrompt() {
         I'm Logged In (Refresh)
       </button>
       <p class="help-text">Make sure you're logged in at localhost:3000</p>
+      <div id="prompt-status" class="status" style="display:none"></div>
     </div>
   `;
   
@@ -42,20 +43,17 @@ function showLoginPrompt() {
     btn.disabled = true;
     
     try {
-      // Get all tabs with JobRoom
       const tabs = await chrome.tabs.query({ url: 'http://localhost:3000/*' });
       
       if (tabs.length === 0) {
-        showStatus('Please open JobRoom first', 'error');
+        showPromptStatus('Please open JobRoom first', 'error');
         btn.textContent = "I'm Logged In (Refresh)";
         btn.disabled = false;
         return;
       }
       
-      // Try to get token from the first JobRoom tab
       const tab = tabs[0];
       
-      // Execute script to get token from localStorage
       const results = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         func: () => {
@@ -66,47 +64,37 @@ function showLoginPrompt() {
       if (results && results[0] && results[0].result) {
         const token = results[0].result;
         if (token) {
-          // Save token to extension storage
           await chrome.storage.local.set({ token });
           
-          // Validate token
           const valid = await validateToken(token);
           if (valid) {
-            showStatus('Connected!', 'success');
+            showPromptStatus('Connected!', 'success');
             setTimeout(() => location.reload(), 1000);
             return;
           }
         }
       }
       
-      showStatus('Not logged in. Please login first.', 'error');
+      showPromptStatus('Not logged in. Please login first.', 'error');
       btn.textContent = "I'm Logged In (Refresh)";
       btn.disabled = false;
       
     } catch (error) {
       console.error('Sync error:', error);
-      showStatus('Error syncing. Refresh the JobRoom page.', 'error');
+      showPromptStatus('Error syncing. Refresh the JobRoom page.', 'error');
       btn.textContent = "I'm Logged In (Refresh)";
       btn.disabled = false;
     }
   });
 }
 
-function showStatus(message, type) {
-  // Create or get status element
-  let statusEl = document.getElementById('prompt-status');
-  if (!statusEl) {
-    statusEl = document.createElement('div');
-    statusEl.id = 'prompt-status';
-    statusEl.className = 'status';
-    document.querySelector('.login-prompt').prepend(statusEl);
+function showPromptStatus(message, type) {
+  const statusEl = document.getElementById('prompt-status');
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.textContent = message;
+    statusEl.className = `status ${type}`;
   }
-  
-  statusEl.textContent = message;
-  statusEl.className = `status ${type}`;
-  setTimeout(() => {
-    statusEl.className = 'status';
-  }, 4000);
 }
 
 async function initializeForm() {
@@ -170,21 +158,26 @@ async function autoExtractOnLoad() {
 }
 
 async function extractData(showNotification = true) {
+  const statusEl = document.getElementById('status');
+  
   if (showNotification) {
-    showStatus('Extracting...', 'success');
+    statusEl.textContent = 'Extracting...';
+    statusEl.className = 'status success';
   }
   
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     
     if (!tab?.id) {
-      showStatus('No active tab found', 'error');
+      statusEl.textContent = 'No active tab found';
+      statusEl.className = 'status error';
       return;
     }
     
     chrome.tabs.sendMessage(tab.id, { action: 'extractJobData' }, (response) => {
       if (chrome.runtime.lastError) {
-        showStatus('Refresh page and try again', 'error');
+        statusEl.textContent = 'Refresh page and try again';
+        statusEl.className = 'status error';
         return;
       }
       
@@ -194,21 +187,25 @@ async function extractData(showNotification = true) {
         showExtractedBanner();
         
         if (showNotification) {
-          showStatus('Data extracted!', 'success');
+          statusEl.textContent = 'Data extracted!';
+          statusEl.className = 'status success';
         }
         
         if (!response.data.company || !response.data.position) {
           setTimeout(() => {
-            showStatus('Please fill missing fields', 'error');
+            statusEl.textContent = 'Please fill missing fields';
+            statusEl.className = 'status error';
           }, 2000);
         }
       } else {
-        showStatus('No data found. Fill manually.', 'error');
+        statusEl.textContent = 'No data found. Fill manually.';
+        statusEl.className = 'status error';
       }
     });
   } catch (error) {
     console.error('Extraction error:', error);
-    showStatus('Extraction failed', 'error');
+    statusEl.textContent = 'Extraction failed';
+    statusEl.className = 'status error';
   }
 }
 
@@ -219,6 +216,7 @@ async function saveJob() {
     return;
   }
 
+  const statusEl = document.getElementById('status');
   const jobData = {
     company_name: document.getElementById('company').value.trim(),
     position_title: document.getElementById('position').value.trim(),
@@ -230,7 +228,8 @@ async function saveJob() {
   };
 
   if (!jobData.company_name || !jobData.position_title) {
-    showStatus('Fill Company & Position', 'error');
+    statusEl.textContent = 'Fill Company & Position';
+    statusEl.className = 'status error';
     return;
   }
 
@@ -249,16 +248,19 @@ async function saveJob() {
     });
 
     if (response.ok) {
-      showStatus('Saved to JobRoom!', 'success');
+      statusEl.textContent = 'Saved to JobRoom!';
+      statusEl.className = 'status success';
       document.getElementById('jobForm').reset();
       chrome.storage.local.remove(['jobData']);
       hideExtractedBanner();
     } else {
       const error = await response.text();
-      showStatus('Error: ' + error, 'error');
+      statusEl.textContent = 'Error: ' + error;
+      statusEl.className = 'status error';
     }
   } catch (error) {
-    showStatus('Connection error', 'error');
+    statusEl.textContent = 'Connection error';
+    statusEl.className = 'status error';
     console.error('Save error:', error);
   } finally {
     btn.disabled = false;
@@ -273,15 +275,6 @@ function fillForm(data) {
   if (data.url) document.getElementById('jobUrl').value = data.url;
   if (data.salary) document.getElementById('salary').value = data.salary;
   if (data.notes) document.getElementById('notes').value = data.notes;
-}
-
-function showStatus(message, type) {
-  const statusEl = document.getElementById('status');
-  statusEl.textContent = message;
-  statusEl.className = `status ${type}`;
-  setTimeout(() => {
-    statusEl.className = 'status';
-  }, 4000);
 }
 
 function showExtractedBanner() {
