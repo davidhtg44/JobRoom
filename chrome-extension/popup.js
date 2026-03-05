@@ -5,15 +5,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const token = await getToken();
   
   if (!token) {
-    // No token - show login prompt
     showLoginPrompt();
   } else {
-    // Validate token is still good
     const valid = await validateToken(token);
     if (!valid) {
       showLoginPrompt();
     } else {
-      // Token valid - initialize form
       initializeForm();
     }
   }
@@ -31,41 +28,85 @@ function showLoginPrompt() {
       <button id="refreshToken" class="btn btn-secondary btn-block" style="margin-top: 0.5rem">
         I'm Logged In (Refresh)
       </button>
+      <p class="help-text">Make sure you're logged in at localhost:3000</p>
     </div>
   `;
   
   document.getElementById('openJobRoom').addEventListener('click', () => {
     chrome.tabs.create({ url: 'http://localhost:3000' });
-    window.close();
   });
   
   document.getElementById('refreshToken').addEventListener('click', async () => {
-    await syncTokenFromWeb();
+    const btn = document.getElementById('refreshToken');
+    btn.textContent = 'Checking...';
+    btn.disabled = true;
+    
+    try {
+      // Get all tabs with JobRoom
+      const tabs = await chrome.tabs.query({ url: 'http://localhost:3000/*' });
+      
+      if (tabs.length === 0) {
+        showStatus('Please open JobRoom first', 'error');
+        btn.textContent = "I'm Logged In (Refresh)";
+        btn.disabled = false;
+        return;
+      }
+      
+      // Try to get token from the first JobRoom tab
+      const tab = tabs[0];
+      
+      // Execute script to get token from localStorage
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => {
+          return localStorage.getItem('token');
+        }
+      });
+      
+      if (results && results[0] && results[0].result) {
+        const token = results[0].result;
+        if (token) {
+          // Save token to extension storage
+          await chrome.storage.local.set({ token });
+          
+          // Validate token
+          const valid = await validateToken(token);
+          if (valid) {
+            showStatus('Connected!', 'success');
+            setTimeout(() => location.reload(), 1000);
+            return;
+          }
+        }
+      }
+      
+      showStatus('Not logged in. Please login first.', 'error');
+      btn.textContent = "I'm Logged In (Refresh)";
+      btn.disabled = false;
+      
+    } catch (error) {
+      console.error('Sync error:', error);
+      showStatus('Error syncing. Refresh the JobRoom page.', 'error');
+      btn.textContent = "I'm Logged In (Refresh)";
+      btn.disabled = false;
+    }
   });
 }
 
-async function syncTokenFromWeb() {
-  try {
-    const tabs = await chrome.tabs.query({ url: 'http://localhost:3000/*' });
-    if (tabs.length > 0) {
-      // Inject content script to get token
-      await chrome.scripting.executeScript({
-        target: { tabId: tabs[0].id },
-        func: () => localStorage.getItem('token')
-      }, (results) => {
-        if (results && results[0]?.result) {
-          const token = results[0].result;
-          if (token) {
-            chrome.storage.local.set({ token }, () => {
-              location.reload();
-            });
-          }
-        }
-      });
-    }
-  } catch (error) {
-    console.error('Sync error:', error);
+function showStatus(message, type) {
+  // Create or get status element
+  let statusEl = document.getElementById('prompt-status');
+  if (!statusEl) {
+    statusEl = document.createElement('div');
+    statusEl.id = 'prompt-status';
+    statusEl.className = 'status';
+    document.querySelector('.login-prompt').prepend(statusEl);
   }
+  
+  statusEl.textContent = message;
+  statusEl.className = `status ${type}`;
+  setTimeout(() => {
+    statusEl.className = 'status';
+  }, 4000);
 }
 
 async function initializeForm() {
@@ -73,10 +114,8 @@ async function initializeForm() {
   const extractBtn = document.getElementById('extractBtn');
   const saveBtn = document.getElementById('saveBtn');
   const statusEl = document.getElementById('status');
-  const notLoggedInEl = document.getElementById('notLoggedIn');
   const extractedBanner = document.getElementById('extractedBanner');
   
-  // Form fields
   const companyInput = document.getElementById('company');
   const positionInput = document.getElementById('position');
   const locationInput = document.getElementById('location');
@@ -84,17 +123,14 @@ async function initializeForm() {
   const salaryInput = document.getElementById('salary');
   const notesInput = document.getElementById('notes');
 
-  // Initialize
   await loadSavedData();
   await autoExtractOnLoad();
   
-  // Set current URL as job URL
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab?.url && !jobUrlInput.value) {
     jobUrlInput.value = tab.url;
   }
   
-  // Event listeners
   extractBtn.addEventListener('click', () => extractData(true));
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -116,7 +152,6 @@ async function autoExtractOnLoad() {
   
   const hostname = new URL(tab.url).hostname.toLowerCase();
   
-  // Auto-extract for known job sites
   const jobSites = [
     'linkedin', 'indeed', 'glassdoor', 'greenhouse', 'lever', 
     'workday', 'ziprecruiter', 'monster', 'careerbuilder',

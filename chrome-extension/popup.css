@@ -93,6 +93,33 @@ body {
   margin-bottom: 1rem;
 }
 
+/* Login Prompt */
+.login-prompt {
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.login-prompt h2 {
+  font-size: 1.25rem;
+  color: #1e293b;
+  margin-bottom: 0.75rem;
+}
+
+.login-prompt p {
+  color: #64748b;
+  margin-bottom: 1.5rem;
+}
+
+.help-text {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-top: 1rem;
+}
+
+#prompt-status {
+  margin-bottom: 1rem;
+}
+
 /* Extracted Banner */
 .extracted-banner {
   margin: 0.75rem 0.75rem 0;
