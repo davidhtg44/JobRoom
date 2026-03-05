@@ -50,6 +50,20 @@ class VerificationCode(Base):
     user = relationship("User", back_populates="verification_codes")
 
 
+class PasswordResetCode(Base):
+    __tablename__ = "password_reset_codes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    code = Column(String(6), nullable=False)
+    email = Column(String(255), nullable=False)
+    is_used = Column(Boolean, default=False)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User")
+
+
 class JobApplication(Base):
     __tablename__ = "job_applications"
 

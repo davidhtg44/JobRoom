@@ -14,7 +14,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
 from jose import JWTError, jwt
-from models import get_db, JobApplication, User, ApplicationStatus, VerificationCode
+from models import get_db, JobApplication, User, ApplicationStatus, VerificationCode, PasswordResetCode
 
 # Load environment variables from .env file
 load_dotenv()
@@ -140,6 +140,58 @@ def send_verification_email(email: str, code: str):
         return True
 
 
+def send_password_reset_email(email: str, code: str):
+    """Send password reset code via email"""
+    if not USE_EMAIL_SERVICE:
+        print(f"📧 [DEV MODE] Password reset code for {email}: {code}")
+        return True
+    
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['From'] = FROM_EMAIL or SMTP_USER
+        msg['To'] = email
+        msg['Subject'] = 'JobRoom - Password Reset Code'
+        
+        text = f"""JobRoom Password Reset\n\nYour reset code: {code}\n\nExpires in 15 minutes.\n\nIf you didn't request this, ignore this email."""
+        
+        html = f"""
+        <html><body style="font-family:Arial;max-width:600px;margin:0 auto;">
+        <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);padding:30px;text-align:center;">
+            <h1 style="color:white;margin:0;">JobRoom</h1>
+            <p style="color:rgba(255,255,255,0.8);">Password Reset</p>
+        </div>
+        <div style="padding:30px;background:#f8fafc;">
+            <p>Hello,</p>
+            <p>Your password reset code is:</p>
+            <div style="background:#dc2626;color:white;font-size:32px;font-weight:bold;
+                padding:20px;border-radius:8px;text-align:center;letter-spacing:8px;margin:20px 0;">
+                {code}
+            </div>
+            <p>Expires in <strong>15 minutes</strong>.</p>
+            <p style="color:#64748b;font-size:0.9rem;">Didn't request this? Ignore this email.</p>
+        </div>
+        <div style="padding:20px;text-align:center;color:#64748b;font-size:12px;">
+            <p>JobRoom - jobroom.info@gmail.com</p>
+        </div>
+        </body></html>
+        """
+        
+        msg.attach(MIMEText(text, 'plain'))
+        msg.attach(MIMEText(html, 'html'))
+        
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASS)
+        server.send_message(msg)
+        server.quit()
+        
+        print(f"📧 Reset email sent to {email}")
+        return True
+    except Exception as e:
+        print(f"❌ Reset email error: {e}")
+        return True
+
+
 def generate_verification_code():
     return ''.join(random.choices(string.digits, k=6))
 
@@ -218,6 +270,16 @@ class TokenResponse(BaseModel):
 class VerificationRequest(BaseModel):
     email: str
     code: str
+
+
+class PasswordResetRequest(BaseModel):
+    email: str
+
+
+class PasswordResetVerify(BaseModel):
+    email: str
+    code: str
+    new_password: str
 
 
 # Job Application Pydantic models
@@ -415,6 +477,71 @@ def resend_code(email: str, db: Session = Depends(get_db)):
     return {
         "message": "Verification code resent to email"
     }
+
+
+# Password Reset Endpoints
+@app.post("/api/auth/password-reset/request")
+def request_password_reset(data: PasswordResetRequest, db: Session = Depends(get_db)):
+    """Request password reset code"""
+    user = db.query(User).filter(User.email == data.email).first()
+    
+    # Always return success to prevent email enumeration
+    if not user:
+        return {"message": "If the email exists, a reset code has been sent"}
+    
+    # Generate reset code
+    code = generate_verification_code()
+    expires_at = datetime.utcnow() + timedelta(minutes=15)
+    
+    # Invalidate old reset codes
+    db.query(PasswordResetCode).filter(
+        PasswordResetCode.email == data.email,
+        PasswordResetCode.is_used == False
+    ).delete()
+    
+    reset_code = PasswordResetCode(
+        user_id=user.id,
+        email=data.email,
+        code=code,
+        expires_at=expires_at
+    )
+    db.add(reset_code)
+    db.commit()
+    
+    # Send reset email
+    send_password_reset_email(data.email, code)
+    
+    return {"message": "If the email exists, a reset code has been sent"}
+
+
+@app.post("/api/auth/password-reset/verify")
+def verify_password_reset(data: PasswordResetVerify, db: Session = Depends(get_db)):
+    """Verify reset code and set new password"""
+    user = db.query(User).filter(User.email == data.email).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid request")
+    
+    # Find valid reset code
+    reset_code = db.query(PasswordResetCode).filter(
+        PasswordResetCode.email == data.email,
+        PasswordResetCode.code == data.code,
+        PasswordResetCode.is_used == False
+    ).first()
+    
+    if not reset_code:
+        raise HTTPException(status_code=400, detail="Invalid or expired code")
+    
+    if reset_code.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Code expired")
+    
+    # Update password
+    user.password_hash = get_password_hash(data.new_password)
+    
+    # Mark code as used
+    reset_code.is_used = True
+    db.commit()
+    
+    return {"message": "Password reset successfully"}
 
 
 # Application endpoints

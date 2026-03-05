@@ -10,7 +10,7 @@ const STATUSES = ['wanted', 'applied', 'interview', 'offer', 'rejected', 'withdr
 function App() {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
-  const [authView, setAuthView] = useState('login'); // login, register, verify
+  const [authView, setAuthView] = useState('login'); // login, register, verify, forgot, reset
   const [applications, setApplications] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -34,7 +34,9 @@ function App() {
     email: '',
     password: '',
     full_name: '',
-    verification_code: ''
+    verification_code: '',
+    reset_code: '',
+    new_password: ''
   });
   const [settingsData, setSettingsData] = useState({
     full_name: '',
@@ -163,6 +165,63 @@ function App() {
       } else {
         const errorData = await response.json();
         setError(errorData.detail || 'Failed to resend code');
+      }
+    } catch (error) {
+      setError('Connection error.');
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      const response = await fetch(`${API_URL}/auth/password-reset/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authData.email })
+      });
+      if (response.ok) {
+        setSuccess('If your email exists, you will receive a reset code shortly.');
+        setTimeout(() => {
+          setAuthView('reset');
+        }, 2000);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.detail || 'Request failed');
+      }
+    } catch (error) {
+      setError('Connection error.');
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    
+    if (authData.new_password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API_URL}/auth/password-reset/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: authData.email,
+          code: authData.reset_code,
+          new_password: authData.new_password
+        })
+      });
+      if (response.ok) {
+        setSuccess('Password reset successful! Please login.');
+        setTimeout(() => {
+          setAuthView('login');
+          setAuthData({ ...authData, reset_code: '', new_password: '' });
+        }, 2000);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.detail || 'Reset failed');
       }
     } catch (error) {
       setError('Connection error.');
@@ -417,6 +476,15 @@ function App() {
                   required
                 />
               </div>
+              <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => { setAuthView('forgot'); setError(''); }}
+                  style={{ background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', fontSize: '0.85rem', textDecoration: 'underline' }}
+                >
+                  Forgot Password?
+                </button>
+              </div>
               <button type="submit" className="auth-btn">Sign In</button>
             </form>
           )}
@@ -490,6 +558,75 @@ function App() {
                 style={{ marginTop: '0.5rem' }}
               >
                 Back
+              </button>
+            </form>
+          )}
+
+          {authView === 'forgot' && (
+            <form className="auth-form" onSubmit={handleForgotPassword}>
+              <div className="form-group">
+                <label>Email Address</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={authData.email}
+                  onChange={handleAuthChange}
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+              <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem' }}>
+                Enter your email and we'll send you a code to reset your password.
+              </p>
+              <button type="submit" className="auth-btn">Send Reset Code</button>
+              <button
+                type="button"
+                className="auth-btn auth-btn-secondary"
+                onClick={() => { setAuthView('login'); setError(''); }}
+                style={{ marginTop: '0.5rem' }}
+              >
+                Back to Login
+              </button>
+            </form>
+          )}
+
+          {authView === 'reset' && (
+            <form className="auth-form" onSubmit={handleResetPassword}>
+              <div className="form-group">
+                <label>Reset Code</label>
+                <input
+                  type="text"
+                  name="reset_code"
+                  value={authData.reset_code}
+                  onChange={handleAuthChange}
+                  placeholder="123456"
+                  maxLength={6}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>New Password</label>
+                <input
+                  type="password"
+                  name="new_password"
+                  value={authData.new_password}
+                  onChange={handleAuthChange}
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem' }}>
+                Password must be at least 6 characters.
+              </p>
+              <button type="submit" className="auth-btn">Reset Password</button>
+              <button
+                type="button"
+                className="auth-btn auth-btn-secondary"
+                onClick={() => { setAuthView('login'); setError(''); }}
+                style={{ marginTop: '0.5rem' }}
+              >
+                Back to Login
               </button>
             </form>
           )}
