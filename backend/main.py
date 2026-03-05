@@ -6,8 +6,10 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime, timedelta
 import bcrypt
+import random
+import string
 from jose import JWTError, jwt
-from models import get_db, JobApplication, User, ApplicationStatus
+from models import get_db, JobApplication, User, ApplicationStatus, VerificationCode
 
 # Security settings
 SECRET_KEY = "your-secret-key-change-in-production"
@@ -35,9 +37,13 @@ def get_password_hash(password):
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 
+def generate_verification_code():
+    return ''.join(random.choices(string.digits, k=6))
+
+
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -68,15 +74,32 @@ class UserRegister(BaseModel):
     full_name: Optional[str] = None
 
 
+class UserRegisterVerify(BaseModel):
+    email: str
+    password: str
+    full_name: Optional[str] = None
+    verification_code: str
+
+
 class UserLogin(BaseModel):
     email: str
     password: str
+
+
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    bio: Optional[str] = None
+    password: Optional[str] = None
 
 
 class UserResponse(BaseModel):
     id: int
     email: str
     full_name: Optional[str] = None
+    phone: Optional[str] = None
+    bio: Optional[str] = None
+    is_verified: bool = False
     date_created: datetime
 
     class Config:
@@ -89,6 +112,12 @@ class TokenResponse(BaseModel):
     user: UserResponse
 
 
+class VerificationRequest(BaseModel):
+    email: str
+    code: str
+
+
+# Job Application Pydantic models
 class JobApplicationCreate(BaseModel):
     company_name: str
     position_title: str
@@ -126,21 +155,80 @@ class JobApplicationResponse(JobApplicationCreate):
 
 
 # Auth endpoints
-@app.post("/api/auth/register", response_model=TokenResponse)
-def register(user_data: UserRegister, db: Session = Depends(get_db)):
+@app.post("/api/auth/register", response_model=dict)
+def register_init(user_data: UserRegister, db: Session = Depends(get_db)):
+    """Start registration - send verification code"""
     # Check if user exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Create new user
-    hashed_password = get_password_hash(user_data.password)
-    new_user = User(
+    # Generate and store verification code
+    code = generate_verification_code()
+    expires_at = datetime.utcnow() + timedelta(minutes=15)
+    
+    # Remove any existing unused codes for this email
+    db.query(VerificationCode).filter(
+        VerificationCode.email == user_data.email,
+        VerificationCode.is_used == False
+    ).delete()
+    
+    # Create verification code (user_id will be set after verification)
+    verification = VerificationCode(
         email=user_data.email,
+        code=code,
+        expires_at=expires_at,
+        is_used=False
+    )
+    db.add(verification)
+    db.commit()
+    
+    # In production, send email here. For now, return code for testing.
+    print(f"📧 Verification code for {user_data.email}: {code}")
+    
+    return {
+        "message": "Verification code sent to email",
+        "email": user_data.email,
+        # Remove in production:
+        "debug_code": code
+    }
+
+
+@app.post("/api/auth/register/verify", response_model=TokenResponse)
+def register_verify(data: UserRegisterVerify, db: Session = Depends(get_db)):
+    """Complete registration with verification code"""
+    # Find verification code
+    verification = db.query(VerificationCode).filter(
+        VerificationCode.email == data.email,
+        VerificationCode.code == data.verification_code,
+        VerificationCode.is_used == False
+    ).first()
+    
+    if not verification:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+    
+    if verification.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Verification code expired")
+    
+    # Check if user exists
+    existing_user = db.query(User).filter(User.email == data.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Create user
+    hashed_password = get_password_hash(data.password)
+    new_user = User(
+        email=data.email,
         password_hash=hashed_password,
-        full_name=user_data.full_name
+        full_name=data.full_name,
+        is_verified=True
     )
     db.add(new_user)
+    
+    # Mark code as used
+    verification.is_used = True
+    verification.user_id = new_user.id
+    
     db.commit()
     db.refresh(new_user)
     
@@ -174,7 +262,61 @@ def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 
-# Application endpoints (user-scoped)
+@app.put("/api/auth/me", response_model=UserResponse)
+def update_profile(
+    user_update: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    update_data = user_update.model_dump(exclude_unset=True)
+    
+    if "password" in update_data and update_data["password"]:
+        current_user.password_hash = get_password_hash(update_data["password"])
+        del update_data["password"]
+    
+    for key, value in update_data.items():
+        setattr(current_user, key, value)
+    
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@app.post("/api/auth/resend-code")
+def resend_code(email: str, db: Session = Depends(get_db)):
+    """Resend verification code"""
+    user = db.query(User).filter(User.email == email).first()
+    if user and user.is_verified:
+        raise HTTPException(status_code=400, detail="Email already verified")
+    
+    # Generate new code
+    code = generate_verification_code()
+    expires_at = datetime.utcnow() + timedelta(minutes=15)
+    
+    # Invalidate old codes
+    db.query(VerificationCode).filter(
+        VerificationCode.email == email,
+        VerificationCode.is_used == False
+    ).delete()
+    
+    verification = VerificationCode(
+        email=email,
+        code=code,
+        expires_at=expires_at,
+        user_id=user.id if user else 0
+    )
+    db.add(verification)
+    db.commit()
+    
+    print(f"📧 New verification code for {email}: {code}")
+    
+    return {
+        "message": "Verification code resent",
+        "debug_code": code
+    }
+
+
+# Application endpoints
 @app.get("/api/applications", response_model=List[JobApplicationResponse])
 def get_applications(
     skip: int = 0,

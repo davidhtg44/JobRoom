@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JobRoom</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="logo">
+        <span class="logo-icon">📋</span>
+        <h1>JobRoom</h1>
+      </div>
+      <p class="subtitle">Save job applications instantly</p>
+    </header>
+
+    <div id="status" class="status"></div>
+
+    <form id="jobForm">
+      <div class="form-group">
+        <label for="company">Company *</label>
+        <input type="text" id="company" name="company" required placeholder="e.g., Google">
+      </div>
+
+      <div class="form-group">
+        <label for="position">Position *</label>
+        <input type="text" id="position" name="position" required placeholder="e.g., Software Engineer">
+      </div>
+
+      <div class="form-group">
+        <label for="location">Location</label>
+        <input type="text" id="location" name="location" placeholder="e.g., San Francisco, CA">
+      </div>
+
+      <div class="form-group">
+        <label for="jobUrl">Job URL</label>
+        <input type="url" id="jobUrl" name="jobUrl" placeholder="https://...">
+      </div>
+
+      <div class="form-group">
+        <label for="salary">Salary Range</label>
+        <input type="text" id="salary" name="salary" placeholder="e.g., $120k - $180k">
+      </div>
+
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" rows="3" placeholder="Additional notes..."></textarea>
+      </div>
+
+      <div class="button-group">
+        <button type="button" id="extractBtn" class="btn btn-secondary">
+          🔍 Auto-Extract
+        </button>
+        <button type="submit" id="saveBtn" class="btn btn-primary">
+          💾 Save to JobRoom
+        </button>
+      </div>
+    </form>
+
+    <div class="footer">
+      <p>
+        <a href="http://localhost:3000" target="_blank" id="openApp">Open JobRoom →</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

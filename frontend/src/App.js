@@ -8,11 +8,13 @@ const STATUSES = ['wanted', 'applied', 'interview', 'offer', 'rejected', 'withdr
 function App() {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
-  const [showLogin, setShowLogin] = useState(true);
+  const [authView, setAuthView] = useState('login'); // login, register, verify
   const [applications, setApplications] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [formData, setFormData] = useState({
     company_name: '',
     position_title: '',
@@ -28,7 +30,15 @@ function App() {
   const [authData, setAuthData] = useState({
     email: '',
     password: '',
-    full_name: ''
+    full_name: '',
+    verification_code: ''
+  });
+  const [settingsData, setSettingsData] = useState({
+    full_name: '',
+    phone: '',
+    bio: '',
+    password: '',
+    confirm_password: ''
   });
 
   useEffect(() => {
@@ -40,6 +50,13 @@ function App() {
   useEffect(() => {
     if (user) {
       fetchApplications();
+      setSettingsData({
+        full_name: user.full_name || '',
+        phone: user.phone || '',
+        bio: user.bio || '',
+        password: '',
+        confirm_password: ''
+      });
     }
   }, [user]);
 
@@ -74,30 +91,7 @@ function App() {
     }
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError('');
-    try {
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: authData.email, password: authData.password })
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setToken(data.access_token);
-        setUser(data.user);
-        localStorage.setItem('token', data.access_token);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.detail || 'Login failed');
-      }
-    } catch (error) {
-      setError('Connection error. Make sure the backend is running.');
-    }
-  };
-
-  const handleRegister = async (e) => {
+  const handleRegisterInit = async (e) => {
     e.preventDefault();
     setError('');
     try {
@@ -112,15 +106,125 @@ function App() {
       });
       if (response.ok) {
         const data = await response.json();
-        setToken(data.access_token);
-        setUser(data.user);
-        localStorage.setItem('token', data.access_token);
+        setSuccess(`Verification code sent to ${authData.email}. Check console for debug code.`);
+        console.log('📧 Verification code:', data.debug_code);
+        setAuthView('verify');
       } else {
         const errorData = await response.json();
         setError(errorData.detail || 'Registration failed');
       }
     } catch (error) {
       setError('Connection error. Make sure the backend is running.');
+    }
+  };
+
+  const handleRegisterVerify = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      const response = await fetch(`${API_URL}/auth/register/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: authData.email, 
+          password: authData.password,
+          full_name: authData.full_name || undefined,
+          verification_code: authData.verification_code
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setToken(data.access_token);
+        setUser(data.user);
+        localStorage.setItem('token', data.access_token);
+        // Sync token with Chrome extension
+        syncTokenWithExtension(data.access_token);
+        setAuthView('login');
+        setSuccess('Account created successfully!');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.detail || 'Verification failed');
+      }
+    } catch (error) {
+      setError('Connection error.');
+    }
+  };
+
+  // Sync token with Chrome extension via localStorage event
+  const syncTokenWithExtension = (token) => {
+    // Store token in a format the extension can access via content script
+    localStorage.setItem('jobroom_token', token);
+    // Trigger storage event for extension content script
+    window.dispatchEvent(new Event('storage'));
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authData.email, password: authData.password })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setToken(data.access_token);
+        setUser(data.user);
+        localStorage.setItem('token', data.access_token);
+        // Sync token with Chrome extension
+        syncTokenWithExtension(data.access_token);
+        setSuccess('Welcome back!');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.detail || 'Login failed');
+      }
+    } catch (error) {
+      setError('Connection error. Make sure the backend is running.');
+    }
+  };
+
+  const handleSettingsSave = async (e) => {
+    e.preventDefault();
+    setError('');
+    
+    if (settingsData.password && settingsData.password !== settingsData.confirm_password) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    try {
+      const updateData = {
+        full_name: settingsData.full_name || undefined,
+        phone: settingsData.phone || undefined,
+        bio: settingsData.bio || undefined
+      };
+      
+      if (settingsData.password) {
+        updateData.password = settingsData.password;
+      }
+
+      const response = await fetch(`${API_URL}/auth/me`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      if (response.ok) {
+        const updatedUser = await response.json();
+        setUser(updatedUser);
+        setSuccess('Profile updated successfully!');
+        setSettingsData({ ...settingsData, password: '', confirm_password: '' });
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.detail || 'Update failed');
+      }
+    } catch (error) {
+      setError('Connection error.');
     }
   };
 
@@ -170,6 +274,8 @@ function App() {
       
       fetchApplications();
       resetForm();
+      setSuccess(editingId ? 'Application updated!' : 'Application saved!');
+      setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
       console.error('Error:', error);
       setError('Error connecting to server');
@@ -201,6 +307,8 @@ function App() {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         fetchApplications();
+        setSuccess('Application deleted');
+        setTimeout(() => setSuccess(''), 3000);
       } catch (error) {
         console.error('Error deleting application:', error);
       }
@@ -232,6 +340,10 @@ function App() {
     setAuthData({ ...authData, [e.target.name]: e.target.value });
   };
 
+  const handleSettingsChange = (e) => {
+    setSettingsData({ ...settingsData, [e.target.name]: e.target.value });
+  };
+
   // Stats calculation
   const stats = STATUSES.reduce((acc, status) => {
     acc[status] = applications.filter(app => app.status === status).length;
@@ -245,13 +357,46 @@ function App() {
         <div className="auth-card">
           <div className="auth-header">
             <h1>JobRoom</h1>
-            <p>{showLogin ? 'Sign in to your account' : 'Create your account'}</p>
+            <p>
+              {authView === 'login' && 'Sign in to your account'}
+              {authView === 'register' && 'Create your account'}
+              {authView === 'verify' && 'Enter verification code'}
+            </p>
           </div>
           
           {error && <div className="error-message">{error}</div>}
+          {success && <div className="success-message">{success}</div>}
           
-          <form className="auth-form" onSubmit={showLogin ? handleLogin : handleRegister}>
-            {!showLogin && (
+          {authView === 'login' && (
+            <form className="auth-form" onSubmit={handleLogin}>
+              <div className="form-group">
+                <label>Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={authData.email}
+                  onChange={handleAuthChange}
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Password</label>
+                <input
+                  type="password"
+                  name="password"
+                  value={authData.password}
+                  onChange={handleAuthChange}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              <button type="submit" className="auth-btn">Sign In</button>
+            </form>
+          )}
+
+          {authView === 'register' && (
+            <form className="auth-form" onSubmit={handleRegisterInit}>
               <div className="form-group">
                 <label>Full Name</label>
                 <input
@@ -262,47 +407,78 @@ function App() {
                   placeholder="John Doe"
                 />
               </div>
-            )}
-            <div className="form-group">
-              <label>Email</label>
-              <input
-                type="email"
-                name="email"
-                value={authData.email}
-                onChange={handleAuthChange}
-                placeholder="you@example.com"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Password</label>
-              <input
-                type="password"
-                name="password"
-                value={authData.password}
-                onChange={handleAuthChange}
-                placeholder="••••••••"
-                required
-                minLength={6}
-              />
-            </div>
-            <button type="submit" className="auth-btn">
-              {showLogin ? 'Sign In' : 'Create Account'}
-            </button>
-          </form>
+              <div className="form-group">
+                <label>Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={authData.email}
+                  onChange={handleAuthChange}
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Password</label>
+                <input
+                  type="password"
+                  name="password"
+                  value={authData.password}
+                  onChange={handleAuthChange}
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <button type="submit" className="auth-btn">Send Verification Code</button>
+            </form>
+          )}
+
+          {authView === 'verify' && (
+            <form className="auth-form" onSubmit={handleRegisterVerify}>
+              <div className="form-group">
+                <label>Verification Code</label>
+                <input
+                  type="text"
+                  name="verification_code"
+                  value={authData.verification_code}
+                  onChange={handleAuthChange}
+                  placeholder="123456"
+                  maxLength={6}
+                  required
+                />
+              </div>
+              <button type="submit" className="auth-btn">Verify & Create Account</button>
+              <button 
+                type="button" 
+                className="auth-btn auth-btn-secondary"
+                onClick={() => setAuthView('register')}
+              >
+                Back
+              </button>
+            </form>
+          )}
           
           <div className="auth-switch">
-            {showLogin ? "Don't have an account? " : "Already have an account? "}
-            <button onClick={() => { setShowLogin(!showLogin); setError(''); }}>
-              {showLogin ? 'Sign Up' : 'Sign In'}
-            </button>
+            {authView === 'login' && (
+              <>
+                Don't have an account?{' '}
+                <button onClick={() => { setAuthView('register'); setError(''); }}>Sign Up</button>
+              </>
+            )}
+            {authView === 'register' && (
+              <>
+                Already have an account?{' '}
+                <button onClick={() => { setAuthView('login'); setError(''); }}>Sign In</button>
+              </>
+            )}
           </div>
         </div>
       </div>
     );
   }
 
-  // Main app
+  // Main app with settings modal
   return (
     <div className="app-container">
       <header className="app-header">
@@ -315,6 +491,7 @@ function App() {
             <div className="user-name">{user.full_name || 'User'}</div>
             <div className="user-email">{user.email}</div>
           </div>
+          <button className="btn-secondary btn-sm" onClick={() => setShowSettings(true)}>Settings</button>
           <button className="btn-logout" onClick={logout}>Logout</button>
         </div>
       </header>
@@ -532,6 +709,88 @@ function App() {
           </div>
         </div>
       </main>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="modal-overlay" onClick={() => setShowSettings(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Settings</h2>
+              <button className="btn-close" onClick={() => setShowSettings(false)}>×</button>
+            </div>
+            
+            {error && <div className="error-message">{error}</div>}
+            {success && <div className="success-message">{success}</div>}
+            
+            <form className="settings-form" onSubmit={handleSettingsSave}>
+              <div className="form-group">
+                <label>Full Name</label>
+                <input
+                  type="text"
+                  name="full_name"
+                  value={settingsData.full_name}
+                  onChange={handleSettingsChange}
+                  placeholder="Your name"
+                />
+              </div>
+              <div className="form-group">
+                <label>Email</label>
+                <input
+                  type="email"
+                  value={user.email}
+                  disabled
+                  className="disabled-input"
+                />
+              </div>
+              <div className="form-group">
+                <label>Phone</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={settingsData.phone}
+                  onChange={handleSettingsChange}
+                  placeholder="+1 234 567 8900"
+                />
+              </div>
+              <div className="form-group">
+                <label>Bio</label>
+                <textarea
+                  name="bio"
+                  value={settingsData.bio}
+                  onChange={handleSettingsChange}
+                  placeholder="Tell us about yourself..."
+                  rows={3}
+                />
+              </div>
+              <hr className="divider" />
+              <div className="form-group">
+                <label>New Password (leave empty to keep current)</label>
+                <input
+                  type="password"
+                  name="password"
+                  value={settingsData.password}
+                  onChange={handleSettingsChange}
+                  placeholder="••••••••"
+                />
+              </div>
+              <div className="form-group">
+                <label>Confirm New Password</label>
+                <input
+                  type="password"
+                  name="confirm_password"
+                  value={settingsData.confirm_password}
+                  onChange={handleSettingsChange}
+                  placeholder="••••••••"
+                />
+              </div>
+              <div className="form-actions">
+                <button type="submit" className="btn-primary">Save Changes</button>
+                <button type="button" className="btn-secondary" onClick={() => setShowSettings(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

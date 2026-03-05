@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey, Enum
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey, Enum, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -27,9 +27,27 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=True)
+    phone = Column(String(50), nullable=True)
+    bio = Column(Text, nullable=True)
+    is_verified = Column(Boolean, default=False)
     date_created = Column(DateTime, default=datetime.utcnow)
     
     applications = relationship("JobApplication", back_populates="user", cascade="all, delete-orphan")
+    verification_codes = relationship("VerificationCode", back_populates="user", cascade="all, delete-orphan")
+
+
+class VerificationCode(Base):
+    __tablename__ = "verification_codes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    code = Column(String(6), nullable=False)
+    email = Column(String(255), nullable=False)
+    is_used = Column(Boolean, default=False)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", back_populates="verification_codes")
 
 
 class JobApplication(Base):

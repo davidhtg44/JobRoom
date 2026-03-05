@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head><title>Icon Generator</title></head>
+<body>
+<canvas id="c" width="128" height="128"></canvas>
+<script>
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+ctx.fillStyle = '#1a1a2e';
+ctx.fillRect(0,0,128,128);
+ctx.fillStyle = '#fff';
+ctx.font = '80px Arial';
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
+ctx.fillText('📋', 64, 64);
+console.log(c.toDataURL());
+</script>
+</body>
+</html>
