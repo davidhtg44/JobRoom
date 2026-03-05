@@ -1,6 +1,6 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Enum
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey, Enum
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
 import enum
 
@@ -20,10 +20,23 @@ class ApplicationStatus(str, enum.Enum):
     WITHDRAWN = "withdrawn"
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    full_name = Column(String(255), nullable=True)
+    date_created = Column(DateTime, default=datetime.utcnow)
+    
+    applications = relationship("JobApplication", back_populates="user", cascade="all, delete-orphan")
+
+
 class JobApplication(Base):
     __tablename__ = "job_applications"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     company_name = Column(String(255), nullable=False)
     position_title = Column(String(255), nullable=False)
     job_url = Column(String(500), nullable=True)
@@ -36,6 +49,8 @@ class JobApplication(Base):
     date_applied = Column(DateTime, nullable=True)
     date_created = Column(DateTime, default=datetime.utcnow)
     date_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    user = relationship("User", back_populates="applications")
 
 
 def get_db():

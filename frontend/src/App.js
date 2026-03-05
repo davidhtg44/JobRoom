@@ -6,9 +6,13 @@ const API_URL = 'http://localhost:8000/api';
 const STATUSES = ['wanted', 'applied', 'interview', 'offer', 'rejected', 'withdrawn'];
 
 function App() {
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [showLogin, setShowLogin] = useState(true);
   const [applications, setApplications] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     company_name: '',
     position_title: '',
@@ -21,30 +25,121 @@ function App() {
     contact_email: '',
     date_applied: ''
   });
+  const [authData, setAuthData] = useState({
+    email: '',
+    password: '',
+    full_name: ''
+  });
 
   useEffect(() => {
-    fetchApplications();
+    if (token) {
+      fetchUser();
+    }
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchApplications();
+    }
+  }, [user]);
+
+  const fetchUser = async () => {
+    try {
+      const response = await fetch(`${API_URL}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      } else {
+        logout();
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      logout();
+    }
+  };
 
   const fetchApplications = async () => {
     try {
-      const response = await fetch(`${API_URL}/applications`);
-      const data = await response.json();
-      setApplications(data);
+      const response = await fetch(`${API_URL}/applications`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setApplications(data);
+      }
     } catch (error) {
       console.error('Error fetching applications:', error);
     }
   };
 
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authData.email, password: authData.password })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setToken(data.access_token);
+        setUser(data.user);
+        localStorage.setItem('token', data.access_token);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.detail || 'Login failed');
+      }
+    } catch (error) {
+      setError('Connection error. Make sure the backend is running.');
+    }
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: authData.email, 
+          password: authData.password,
+          full_name: authData.full_name || undefined
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setToken(data.access_token);
+        setUser(data.user);
+        localStorage.setItem('token', data.access_token);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.detail || 'Registration failed');
+      }
+    } catch (error) {
+      setError('Connection error. Make sure the backend is running.');
+    }
+  };
+
+  const logout = () => {
+    setToken(null);
+    setUser(null);
+    setApplications([]);
+    localStorage.removeItem('token');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     const url = editingId
       ? `${API_URL}/applications/${editingId}`
       : `${API_URL}/applications`;
     const method = editingId ? 'PUT' : 'POST';
 
     const submitData = { ...formData };
-    // Remove empty fields that backend doesn't accept
     if (submitData.date_applied) {
       submitData.date_applied = new Date(submitData.date_applied).toISOString();
     } else {
@@ -57,32 +152,27 @@ function App() {
     if (!submitData.contact_name) delete submitData.contact_name;
     if (!submitData.contact_email) delete submitData.contact_email;
 
-    console.log('Saving to:', url);
-    console.log('Data:', submitData);
-
     try {
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(submitData)
       });
       
-      console.log('Response status:', response.status);
-      
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Server error:', errorText);
-        alert('Error saving: ' + errorText);
+        setError(errorText || 'Error saving application');
         return;
       }
       
-      const result = await response.json();
-      console.log('Saved successfully:', result);
       fetchApplications();
       resetForm();
     } catch (error) {
-      console.error('Fetch error:', error);
-      alert('Error connecting to server. Make sure backend is running on port 8000.');
+      console.error('Error:', error);
+      setError('Error connecting to server');
     }
   };
 
@@ -106,7 +196,10 @@ function App() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this application?')) {
       try {
-        await fetch(`${API_URL}/applications/${id}`, { method: 'DELETE' });
+        await fetch(`${API_URL}/applications/${id}`, { 
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         fetchApplications();
       } catch (error) {
         console.error('Error deleting application:', error);
@@ -135,319 +228,310 @@ function App() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Calculate stats
+  const handleAuthChange = (e) => {
+    setAuthData({ ...authData, [e.target.name]: e.target.value });
+  };
+
+  // Stats calculation
   const stats = STATUSES.reduce((acc, status) => {
     acc[status] = applications.filter(app => app.status === status).length;
     return acc;
   }, {});
 
+  // Auth pages
+  if (!user) {
+    return (
+      <div className="auth-container">
+        <div className="auth-card">
+          <div className="auth-header">
+            <h1>JobRoom</h1>
+            <p>{showLogin ? 'Sign in to your account' : 'Create your account'}</p>
+          </div>
+          
+          {error && <div className="error-message">{error}</div>}
+          
+          <form className="auth-form" onSubmit={showLogin ? handleLogin : handleRegister}>
+            {!showLogin && (
+              <div className="form-group">
+                <label>Full Name</label>
+                <input
+                  type="text"
+                  name="full_name"
+                  value={authData.full_name}
+                  onChange={handleAuthChange}
+                  placeholder="John Doe"
+                />
+              </div>
+            )}
+            <div className="form-group">
+              <label>Email</label>
+              <input
+                type="email"
+                name="email"
+                value={authData.email}
+                onChange={handleAuthChange}
+                placeholder="you@example.com"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Password</label>
+              <input
+                type="password"
+                name="password"
+                value={authData.password}
+                onChange={handleAuthChange}
+                placeholder="••••••••"
+                required
+                minLength={6}
+              />
+            </div>
+            <button type="submit" className="auth-btn">
+              {showLogin ? 'Sign In' : 'Create Account'}
+            </button>
+          </form>
+          
+          <div className="auth-switch">
+            {showLogin ? "Don't have an account? " : "Already have an account? "}
+            <button onClick={() => { setShowLogin(!showLogin); setError(''); }}>
+              {showLogin ? 'Sign Up' : 'Sign In'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Main app
   return (
     <div className="app-container">
-      {/* Header */}
-      <header className="header">
-        <h1>
-          <span className="icon">🚀</span>
-          JobRoom
-        </h1>
-        <p>Track your job applications with style</p>
+      <header className="app-header">
+        <div className="logo">
+          <div className="logo-icon">📋</div>
+          <h1>JobRoom</h1>
+        </div>
+        <div className="user-menu">
+          <div className="user-info">
+            <div className="user-name">{user.full_name || 'User'}</div>
+            <div className="user-email">{user.email}</div>
+          </div>
+          <button className="btn-logout" onClick={logout}>Logout</button>
+        </div>
       </header>
 
-      {/* Stats Cards */}
-      <div className="stats-container">
-        <div className="stat-card" style={{ animationDelay: '0ms' }}>
-          <div className="stat-number">{applications.length}</div>
-          <div className="stat-label">Total</div>
-        </div>
-        <div className="stat-card" style={{ animationDelay: '100ms' }}>
-          <div className="stat-number">{stats.wanted}</div>
-          <div className="stat-label">Wanted</div>
-        </div>
-        <div className="stat-card" style={{ animationDelay: '200ms' }}>
-          <div className="stat-number">{stats.applied}</div>
-          <div className="stat-label">Applied</div>
-        </div>
-        <div className="stat-card" style={{ animationDelay: '300ms' }}>
-          <div className="stat-number">{stats.interview}</div>
-          <div className="stat-label">Interview</div>
-        </div>
-        <div className="stat-card" style={{ animationDelay: '400ms' }}>
-          <div className="stat-number">{stats.offer}</div>
-          <div className="stat-label">Offers</div>
-        </div>
-      </div>
-
-      {/* Main Card */}
-      <div className="main-card">
-        <div className="card-header-custom">
-          <h5>
-            <span>📋</span> Applications
-            <span style={{ color: '#667eea', marginLeft: '0.5rem' }}>
-              ({applications.length})
-            </span>
-          </h5>
-          <button
-            className="btn btn-add"
-            onClick={() => setShowForm(!showForm)}
-          >
-            {showForm ? '✕ Cancel' : '+ Add Application'}
-          </button>
-        </div>
-
-        {showForm && (
-          <div className="form-section">
-            <form onSubmit={handleSubmit}>
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Company Name *</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="company_name"
-                    value={formData.company_name}
-                    onChange={handleChange}
-                    placeholder="e.g., Google"
-                    required
-                  />
-                </div>
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Position Title *</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="position_title"
-                    value={formData.position_title}
-                    onChange={handleChange}
-                    placeholder="e.g., Senior Software Engineer"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="row">
-                <div className="col-md-4 mb-3">
-                  <label className="form-label">Job URL</label>
-                  <input
-                    type="url"
-                    className="form-control"
-                    name="job_url"
-                    value={formData.job_url}
-                    onChange={handleChange}
-                    placeholder="https://..."
-                  />
-                </div>
-                <div className="col-md-4 mb-3">
-                  <label className="form-label">Status</label>
-                  <select
-                    className="form-select"
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                  >
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {s === 'wanted' && '💭 '}
-                        {s === 'applied' && '📤 '}
-                        {s === 'interview' && '🎯 '}
-                        {s === 'offer' && '🎉 '}
-                        {s === 'rejected' && '❌ '}
-                        {s === 'withdrawn' && '👋 '}
-                        {s.charAt(0).toUpperCase() + s.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="col-md-4 mb-3">
-                  <label className="form-label">Date Applied</label>
-                  <input
-                    type="date"
-                    className="form-control"
-                    name="date_applied"
-                    value={formData.date_applied}
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
-              <div className="row">
-                <div className="col-md-4 mb-3">
-                  <label className="form-label">Location</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    placeholder="e.g., San Francisco, CA"
-                  />
-                </div>
-                <div className="col-md-4 mb-3">
-                  <label className="form-label">Salary Range</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="salary_range"
-                    value={formData.salary_range}
-                    onChange={handleChange}
-                    placeholder="e.g., $150k - $200k"
-                  />
-                </div>
-                <div className="col-md-4 mb-3">
-                  <label className="form-label">Contact Name</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="contact_name"
-                    value={formData.contact_name}
-                    onChange={handleChange}
-                    placeholder="Recruiter name"
-                  />
-                </div>
-              </div>
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Contact Email</label>
-                  <input
-                    type="email"
-                    className="form-control"
-                    name="contact_email"
-                    value={formData.contact_email}
-                    onChange={handleChange}
-                    placeholder="recruiter@company.com"
-                  />
-                </div>
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Notes</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleChange}
-                    placeholder="Quick notes..."
-                  />
-                </div>
-              </div>
-              <div className="d-flex gap-2">
-                <button type="submit" className="btn btn-add">
-                  {editingId ? '💾 Update Application' : '✨ Save Application'}
-                </button>
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  onClick={resetForm}
-                  style={{ 
-                    background: '#6c757d', 
-                    border: 'none', 
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: '12px',
-                    fontWeight: '600'
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+      <main className="main-content">
+        {/* Stats Bar - Compact */}
+        <div className="stats-bar">
+          <div className="stat-item">
+            <div className="stat-value">{applications.length}</div>
+            <div className="stat-label">Total</div>
           </div>
-        )}
+          <div className="stat-item">
+            <div className="stat-value">{stats.wanted}</div>
+            <div className="stat-label">Wanted</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value">{stats.applied}</div>
+            <div className="stat-label">Applied</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value">{stats.interview}</div>
+            <div className="stat-label">Interview</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value">{stats.offer}</div>
+            <div className="stat-label">Offer</div>
+          </div>
+        </div>
 
-        {/* Applications Table */}
-        <div className="table-container">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Company</th>
-                <th>Position</th>
-                <th>Status</th>
-                <th>Location</th>
-                <th>Applied</th>
-                <th>Notes</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {applications.length === 0 ? (
+        {/* Applications Card */}
+        <div className="content-card">
+          <div className="card-header">
+            <h2>Applications {applications.length > 0 && `(${applications.length})`}</h2>
+            <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
+              {showForm ? 'Cancel' : '+ Add Application'}
+            </button>
+          </div>
+
+          {showForm && (
+            <div className="form-panel">
+              {error && <div className="error-message">{error}</div>}
+              <form onSubmit={handleSubmit}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Company Name *</label>
+                    <input
+                      type="text"
+                      name="company_name"
+                      value={formData.company_name}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Position Title *</label>
+                    <input
+                      type="text"
+                      name="position_title"
+                      value={formData.position_title}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Status</label>
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleChange}
+                    >
+                      {STATUSES.map(s => (
+                        <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Job URL</label>
+                    <input
+                      type="url"
+                      name="job_url"
+                      value={formData.job_url}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Location</label>
+                    <input
+                      type="text"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Salary Range</label>
+                    <input
+                      type="text"
+                      name="salary_range"
+                      value={formData.salary_range}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Date Applied</label>
+                    <input
+                      type="date"
+                      name="date_applied"
+                      value={formData.date_applied}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Contact Name</label>
+                    <input
+                      type="text"
+                      name="contact_name"
+                      value={formData.contact_name}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Contact Email</label>
+                    <input
+                      type="email"
+                      name="contact_email"
+                      value={formData.contact_email}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                    <label>Notes</label>
+                    <textarea
+                      name="notes"
+                      value={formData.notes}
+                      onChange={handleChange}
+                      rows={2}
+                    />
+                  </div>
+                </div>
+                <div className="form-actions">
+                  <button type="submit" className="btn-primary">
+                    {editingId ? 'Update' : 'Save'} Application
+                  </button>
+                  <button type="button" className="btn-secondary" onClick={resetForm}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          <div className="table-responsive">
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <td colSpan="7">
-                    <div className="empty-state">
-                      <div className="empty-state-icon">📭</div>
-                      <p className="empty-state-text">
-                        No applications yet. Click <strong>"+ Add Application"</strong> to get started!
-                      </p>
-                    </div>
-                  </td>
+                  <th>Company</th>
+                  <th>Position</th>
+                  <th>Status</th>
+                  <th>Location</th>
+                  <th>Applied</th>
+                  <th>Actions</th>
                 </tr>
-              ) : (
-                applications.map((app, index) => (
-                  <tr key={app.id} style={{ animationDelay: `${index * 50}ms` }}>
-                    <td data-label="Company" className="company-cell">
-                      <span className="company-name">{app.company_name}</span>
-                      {app.job_url && (
-                        <a 
-                          href={app.job_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="job-link"
-                        >
-                          🔗 View Job
-                        </a>
-                      )}
-                    </td>
-                    <td data-label="Position">
-                      <strong>{app.position_title}</strong>
-                    </td>
-                    <td data-label="Status">
-                      <span className={`badge badge-${app.status}`}>
-                        {app.status === 'wanted' && '💭 '}
-                        {app.status === 'applied' && '📤 '}
-                        {app.status === 'interview' && '🎯 '}
-                        {app.status === 'offer' && '🎉 '}
-                        {app.status === 'rejected' && '❌ '}
-                        {app.status === 'withdrawn' && '👋 '}
-                        {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-                      </span>
-                    </td>
-                    <td data-label="Location">
-                      {app.location || <span style={{ color: '#cbd5e0' }}>—</span>}
-                    </td>
-                    <td data-label="Applied">
-                      {app.date_applied 
-                        ? new Date(app.date_applied).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })
-                        : <span style={{ color: '#cbd5e0' }}>—</span>
-                      }
-                    </td>
-                    <td data-label="Notes">
-                      <small style={{ color: '#718096' }}>
-                        {app.notes 
-                          ? app.notes.length > 40 
-                            ? app.notes.substring(0, 40) + '...' 
-                            : app.notes 
-                          : '—'
-                        }
-                      </small>
-                    </td>
-                    <td data-label="Actions">
-                      <button
-                        className="btn btn-action btn-edit me-2"
-                        onClick={() => handleEdit(app)}
-                      >
-                        ✏️ Edit
-                      </button>
-                      <button
-                        className="btn btn-action btn-delete"
-                        onClick={() => handleDelete(app.id)}
-                      >
-                        🗑️ Delete
-                      </button>
+              </thead>
+              <tbody>
+                {applications.length === 0 ? (
+                  <tr>
+                    <td colSpan="6">
+                      <div className="empty-state">
+                        <div className="empty-state-icon">📭</div>
+                        <p>No applications yet. Click "+ Add Application" to get started.</p>
+                      </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  applications.map(app => (
+                    <tr key={app.id}>
+                      <td data-label="Company">
+                        <strong>{app.company_name}</strong>
+                        {app.job_url && (
+                          <a href={app.job_url} target="_blank" rel="noopener noreferrer" className="company-link">
+                            🔗 View Job
+                          </a>
+                        )}
+                      </td>
+                      <td data-label="Position">{app.position_title}</td>
+                      <td data-label="Status">
+                        <span className={`status-badge status-${app.status}`}>
+                          {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                        </span>
+                      </td>
+                      <td data-label="Location">{app.location || '—'}</td>
+                      <td data-label="Applied">
+                        {app.date_applied 
+                          ? new Date(app.date_applied).toLocaleDateString('en-US', {
+                              month: 'short', day: 'numeric', year: 'numeric'
+                            })
+                          : '—'
+                        }
+                      </td>
+                      <td data-label="Actions">
+                        <button className="btn-sm btn-edit" onClick={() => handleEdit(app)}>Edit</button>
+                        <button className="btn-sm btn-delete" onClick={() => handleDelete(app.id)}>Delete</button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
