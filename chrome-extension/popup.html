@@ -8,62 +8,135 @@
 </head>
 <body>
   <div class="container">
+    <!-- Header -->
     <header class="header">
       <div class="logo">
-        <span class="logo-icon">📋</span>
-        <h1>JobRoom</h1>
+        <div class="logo-icon">📋</div>
+        <div>
+          <h1>JobRoom</h1>
+          <p class="tagline">Save jobs instantly</p>
+        </div>
       </div>
-      <p class="subtitle">Save job applications instantly</p>
     </header>
 
+    <!-- Status Messages -->
     <div id="status" class="status"></div>
 
+    <!-- Not Logged In Warning -->
+    <div id="notLoggedIn" class="warning-box" style="display: none;">
+      <div class="warning-icon">⚠️</div>
+      <p>Please login to JobRoom first</p>
+      <button id="openLogin" class="btn btn-warning">Open JobRoom</button>
+    </div>
+
+    <!-- Job Form -->
     <form id="jobForm">
-      <div class="form-group">
-        <label for="company">Company *</label>
-        <input type="text" id="company" name="company" required placeholder="e.g., Google">
+      <!-- Auto-extracted fields preview -->
+      <div class="extracted-banner" id="extractedBanner" style="display: none;">
+        <span class="check-icon">✅</span>
+        <span>Job data extracted!</span>
       </div>
 
       <div class="form-group">
-        <label for="position">Position *</label>
-        <input type="text" id="position" name="position" required placeholder="e.g., Software Engineer">
+        <label for="company">
+          <span class="label-text">Company</span>
+          <span class="required">*</span>
+        </label>
+        <input 
+          type="text" 
+          id="company" 
+          name="company" 
+          required 
+          placeholder="e.g., Google"
+          autocomplete="off"
+        >
       </div>
 
       <div class="form-group">
-        <label for="location">Location</label>
-        <input type="text" id="location" name="location" placeholder="e.g., San Francisco, CA">
+        <label for="position">
+          <span class="label-text">Position</span>
+          <span class="required">*</span>
+        </label>
+        <input 
+          type="text" 
+          id="position" 
+          name="position" 
+          required 
+          placeholder="e.g., Software Engineer"
+          autocomplete="off"
+        >
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="location">Location</label>
+          <input 
+            type="text" 
+            id="location" 
+            name="location" 
+            placeholder="Remote / City"
+            autocomplete="off"
+          >
+        </div>
+        <div class="form-group">
+          <label for="salary">Salary</label>
+          <input 
+            type="text" 
+            id="salary" 
+            name="salary" 
+            placeholder="$100k-$150k"
+            autocomplete="off"
+          >
+        </div>
       </div>
 
       <div class="form-group">
         <label for="jobUrl">Job URL</label>
-        <input type="url" id="jobUrl" name="jobUrl" placeholder="https://...">
-      </div>
-
-      <div class="form-group">
-        <label for="salary">Salary Range</label>
-        <input type="text" id="salary" name="salary" placeholder="e.g., $120k - $180k">
+        <div class="input-with-icon">
+          <span class="input-icon">🔗</span>
+          <input 
+            type="url" 
+            id="jobUrl" 
+            name="jobUrl" 
+            placeholder="https://..."
+            autocomplete="off"
+          >
+        </div>
       </div>
 
       <div class="form-group">
         <label for="notes">Notes</label>
-        <textarea id="notes" name="notes" rows="3" placeholder="Additional notes..."></textarea>
+        <textarea 
+          id="notes" 
+          name="notes" 
+          rows="2" 
+          placeholder="Additional details..."
+        ></textarea>
       </div>
 
-      <div class="button-group">
-        <button type="button" id="extractBtn" class="btn btn-secondary">
-          🔍 Auto-Extract
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <button type="button" id="extractBtn" class="btn btn-secondary btn-block">
+          <span class="btn-icon">🔍</span>
+          <span>Auto-Extract</span>
         </button>
-        <button type="submit" id="saveBtn" class="btn btn-primary">
-          💾 Save to JobRoom
+        <button type="submit" id="saveBtn" class="btn btn-primary btn-block">
+          <span class="btn-icon">💾</span>
+          <span>Save to JobRoom</span>
         </button>
       </div>
     </form>
 
-    <div class="footer">
-      <p>
-        <a href="http://localhost:3000" target="_blank" id="openApp">Open JobRoom →</a>
-      </p>
-    </div>
+    <!-- Footer -->
+    <footer class="footer">
+      <a href="http://localhost:3000" target="_blank" id="openApp">
+        Open JobRoom →
+      </a>
+      <span class="separator">•</span>
+      <a href="https://github.com/davidhtg44/JobRoom" target="_blank" id="githubLink">
+        GitHub
+      </a>
+    </footer>
   </div>
 
   <script src="popup.js"></script>

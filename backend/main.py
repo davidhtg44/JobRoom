@@ -12,8 +12,12 @@ import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
 from jose import JWTError, jwt
 from models import get_db, JobApplication, User, ApplicationStatus, VerificationCode
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Security settings
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
@@ -108,7 +112,7 @@ def send_verification_email(email: str, code: str):
                 <p>If you didn't request this code, please ignore this email.</p>
             </div>
             <div class="footer">
-                <p>&copy; {datetime.now().year()} JobRoom. All rights reserved.</p>
+                <p>&copy; {datetime.now().year} JobRoom. All rights reserved.</p>
                 <p>Track your job applications with style.</p>
             </div>
         </body>

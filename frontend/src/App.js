@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import Landing from './Landing';
 
 const API_URL = 'http://localhost:8000/api';
 
@@ -367,8 +368,15 @@ function App() {
     return acc;
   }, {});
 
-  // Auth pages
-  if (!user) {
+  // Show landing page when not logged in
+  const [showAuth, setShowAuth] = useState(false);
+  
+  if (!user && !showAuth) {
+    return <Landing onGetStarted={() => setShowAuth(true)} />;
+  }
+
+  // Show auth forms
+  if (!user && showAuth) {
     return (
       <div className="auth-container">
         <div className="auth-card">
@@ -484,7 +492,7 @@ function App() {
               </button>
             </form>
           )}
-          
+
           <div className="auth-switch">
             {authView === 'login' && (
               <>
@@ -498,6 +506,14 @@ function App() {
                 <button onClick={() => { setAuthView('login'); setError(''); }}>Sign In</button>
               </>
             )}
+            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+              <button 
+                onClick={() => setShowAuth(false)} 
+                style={{ background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', fontWeight: 500 }}
+              >
+                ← Back to Home
+              </button>
+            </div>
           </div>
         </div>
       </div>
