@@ -8,12 +8,14 @@ A secure, multi-user web application to manage your job search. Track applicatio
 
 - 🔐 **User Authentication** - Secure login/register with JWT tokens
 - 👤 **Multi-User Support** - Each user has their own private data
+- 📧 **Email Verification** - Verify emails during registration (Gmail SMTP)
 - 📊 **Dashboard Stats** - Quick overview of your application pipeline
 - 📝 **Full CRUD** - Add, edit, and delete applications
 - 🏷️ **Status Tracking** - Track applications through your pipeline
 - 🔗 **Job Links** - Store direct links to job postings
 - 👤 **Contact Management** - Keep track of recruiters
 - 📱 **Responsive Design** - Works on all devices
+- 🔌 **Chrome Extension** - Auto-extract job data from any job board
 
 ## Tech Stack
 
@@ -22,6 +24,7 @@ A secure, multi-user web application to manage your job search. Track applicatio
 - **Database:** SQLite
 - **Authentication:** JWT (JSON Web Tokens)
 - **Password Security:** Bcrypt hashing
+- **Email:** Gmail SMTP
 
 ## Quick Start
 
@@ -32,7 +35,24 @@ cd backend
 pip install -r requirements.txt
 ```
 
-### 2. Start the Backend
+### 2. Configure Email (Optional)
+
+To receive verification codes via email:
+
+1. Create `.env` file in `backend/` folder
+2. Add your Gmail credentials (see `backend/GMAIL_SETUP.md`)
+
+```bash
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your.email@gmail.com
+SMTP_PASS=your-app-password
+FROM_EMAIL=your.email@gmail.com
+```
+
+**Without configuration:** Codes are logged to console (dev mode)
+
+### 3. Start the Backend
 
 ```bash
 cd backend

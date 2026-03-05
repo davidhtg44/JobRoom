@@ -9,6 +9,9 @@ import bcrypt
 import random
 import string
 import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from jose import JWTError, jwt
 from models import get_db, JobApplication, User, ApplicationStatus, VerificationCode
 
@@ -17,10 +20,13 @@ SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# Email settings
-SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
-FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@jobroom.com")
-USE_EMAIL_SERVICE = bool(SENDGRID_API_KEY and SENDGRID_API_KEY != "your-sendgrid-api-key")
+# Gmail SMTP settings
+SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASS = os.getenv("SMTP_PASS", "")
+FROM_EMAIL = os.getenv("FROM_EMAIL", "")
+USE_EMAIL_SERVICE = bool(SMTP_USER and SMTP_PASS)
 
 app = FastAPI(title="JobRoom - Job Application Tracker")
 
@@ -44,52 +50,84 @@ def get_password_hash(password):
 
 
 def send_verification_email(email: str, code: str):
-    """Send verification code via email using SendGrid"""
+    """Send verification code via Gmail SMTP"""
     if not USE_EMAIL_SERVICE:
         # Development mode: log to console
         print(f"📧 [DEV MODE] Verification code for {email}: {code}")
+        print(f"   Configure SMTP in .env to send real emails")
         return True
     
     try:
-        import sendgrid
-        from sendgrid.helpers.mail import Mail
+        # Create email message
+        msg = MIMEMultipart('alternative')
+        msg['From'] = FROM_EMAIL or SMTP_USER
+        msg['To'] = email
+        msg['Subject'] = 'JobRoom - Your Verification Code'
         
-        sg = sendgrid.SendGridAPIClient(api_key=SENDGRID_API_KEY)
+        # Plain text version
+        text = f"""
+        JobRoom Verification Code
         
-        subject = "JobRoom - Your Verification Code"
-        html_content = f"""
+        Your verification code is: {code}
+        
+        This code will expire in 15 minutes.
+        
+        If you didn't request this code, please ignore this email.
+        
+        ---
+        JobRoom - Track your job applications with style
+        """
+        
+        # HTML version
+        html = f"""
         <html>
-        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 30px; text-align: center;">
-                <h1 style="color: white; margin: 0;">JobRoom</h1>
-                <p style="color: rgba(255,255,255,0.8);">Your Verification Code</p>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; }}
+                .header {{ background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+                          padding: 30px; text-align: center; }}
+                .header h1 {{ color: white; margin: 0; }}
+                .header p {{ color: rgba(255,255,255,0.8); }}
+                .content {{ padding: 30px; background: #f8fafc; }}
+                .code {{ background: #1a1a2e; color: white; font-size: 32px; 
+                        font-weight: bold; padding: 20px; border-radius: 8px; 
+                        text-align: center; letter-spacing: 8px; margin: 20px 0; }}
+                .footer {{ padding: 20px; text-align: center; color: #64748b; font-size: 12px; }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>JobRoom</h1>
+                <p>Your Verification Code</p>
             </div>
-            <div style="padding: 30px; background: #f8fafc;">
+            <div class="content">
                 <p>Hello,</p>
                 <p>Thank you for registering with JobRoom. Your verification code is:</p>
-                <div style="background: #1a1a2e; color: white; font-size: 32px; font-weight: bold; padding: 20px; border-radius: 8px; text-align: center; letter-spacing: 8px; margin: 20px 0;">
-                    {code}
-                </div>
-                <p>This code will expire in 15 minutes.</p>
+                <div class="code">{code}</div>
+                <p>This code will expire in <strong>15 minutes</strong>.</p>
                 <p>If you didn't request this code, please ignore this email.</p>
             </div>
-            <div style="padding: 20px; text-align: center; color: #64748b; font-size: 12px;">
-                <p>&copy; 2024 JobRoom. All rights reserved.</p>
+            <div class="footer">
+                <p>&copy; {datetime.now().year()} JobRoom. All rights reserved.</p>
+                <p>Track your job applications with style.</p>
             </div>
         </body>
         </html>
         """
         
-        message = Mail(
-            from_email=FROM_EMAIL,
-            to_emails=email,
-            subject=subject,
-            html_content=html_content
-        )
+        # Attach both versions
+        msg.attach(MIMEText(text, 'plain'))
+        msg.attach(MIMEText(html, 'html'))
         
-        response = sg.send(message)
-        print(f"📧 Email sent to {email}, status code: {response.status_code}")
-        return response.status_code == 202
+        # Send via Gmail SMTP
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASS)
+        server.send_message(msg)
+        server.quit()
+        
+        print(f"📧 Email sent to {email}")
+        return True
         
     except Exception as e:
         print(f"❌ Error sending email: {str(e)}")
