@@ -34,7 +34,7 @@ function showLoginPrompt() {
   `;
   
   document.getElementById('openJobRoom').addEventListener('click', () => {
-    chrome.tabs.create({ url: 'https://frontend-7xxwj55n6-davidhtg44s-projects.vercel.app' });
+    chrome.tabs.create({ url: 'https://frontend-psi-ecru.vercel.app' });
   });
   
   document.getElementById('refreshToken').addEventListener('click', async () => {
@@ -43,7 +43,7 @@ function showLoginPrompt() {
     btn.disabled = true;
     
     try {
-      const tabs = await chrome.tabs.query({ url: 'https://frontend-7xxwj55n6-davidhtg44s-projects.vercel.app/*' });
+      const tabs = await chrome.tabs.query({ url: 'https://frontend-psi-ecru.vercel.app/*' });
       
       if (tabs.length === 0) {
         showPromptStatus('Please open JobRoom first', 'error');

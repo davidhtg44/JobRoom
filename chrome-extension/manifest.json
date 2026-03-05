@@ -11,7 +11,7 @@
   ],
   "host_permissions": [
     "https://jobroom-api.onrender.com/*",
-    "https://frontend-7xxwj55n6-davidhtg44s-projects.vercel.app/*"
+    "https://frontend-psi-ecru.vercel.app/*"
   ],
   "action": {
     "default_popup": "popup.html",

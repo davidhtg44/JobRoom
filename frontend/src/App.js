@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import Landing from './Landing';
 
-// Use environment variable for API URL, fallback to localhost for development
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+// Production URL - update if needed
+const API_URL = 'https://jobroom-api.onrender.com/api';
 
 const STATUSES = ['wanted', 'applied', 'interview', 'offer', 'rejected', 'withdrawn'];
 
