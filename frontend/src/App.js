@@ -525,7 +525,6 @@ function App() {
     <div className="app-container">
       <header className="app-header">
         <div className="logo">
-          <div className="logo-icon">📋</div>
           <h1>JobRoom</h1>
         </div>
         <div className="user-menu">
@@ -775,7 +774,7 @@ function App() {
           <div className="footer-section">
             <h4>Support</h4>
             <ul>
-              <li><a href="mailto:support@jobroom.com">Contact Us</a></li>
+              <li><a href="mailto:jobroom.info@gmail.com">Contact Us</a></li>
               <li><a href="#" onClick={(e) => { e.preventDefault(); setShowLegal('faq'); }}>FAQ</a></li>
             </ul>
           </div>
@@ -919,7 +918,7 @@ function App() {
                   <p>You have the right to access, update, or delete your personal information at any time through your account settings.</p>
                   
                   <h3>5. Contact Us</h3>
-                  <p>If you have any questions about this Privacy Policy, please contact us at support@jobroom.com.</p>
+                  <p>If you have any questions about this Privacy Policy, please contact us at jobroom.info@gmail.com.</p>
                   
                   <p className="legal-updated">Last updated: March 2024</p>
                 </>
@@ -992,7 +991,7 @@ function App() {
                   Job Application Tracking Platform</p>
                   
                   <h3>Contact Information</h3>
-                  <p>Email: support@jobroom.com</p>
+                  <p>Email: jobroom.info@gmail.com</p>
                   
                   <h3>Registered Office</h3>
                   <p>Available upon request</p>
@@ -1030,7 +1029,7 @@ function App() {
                   <p>Currently, data is stored in your account. Export functionality is planned for future releases.</p>
                   
                   <h3>How do I reset my password?</h3>
-                  <p>Contact support@jobroom.com for password reset assistance.</p>
+                  <p>Contact jobroom.info@gmail.com for password reset assistance.</p>
                   
                   <h3>Is my data secure?</h3>
                   <p>Yes, we use industry-standard security measures including password hashing and JWT authentication.</p>

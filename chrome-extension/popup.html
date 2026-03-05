@@ -11,7 +11,6 @@
     <!-- Header -->
     <header class="header">
       <div class="logo">
-        <div class="logo-icon">📋</div>
         <div>
           <h1>JobRoom</h1>
           <p class="tagline">Save jobs instantly</p>
@@ -24,7 +23,6 @@
 
     <!-- Not Logged In Warning -->
     <div id="notLoggedIn" class="warning-box" style="display: none;">
-      <div class="warning-icon">⚠️</div>
       <p>Please login to JobRoom first</p>
       <button id="openLogin" class="btn btn-warning">Open JobRoom</button>
     </div>
@@ -33,8 +31,7 @@
     <form id="jobForm">
       <!-- Auto-extracted fields preview -->
       <div class="extracted-banner" id="extractedBanner" style="display: none;">
-        <span class="check-icon">✅</span>
-        <span>Job data extracted!</span>
+        <span>Data extracted successfully</span>
       </div>
 
       <div class="form-group">
@@ -92,16 +89,13 @@
 
       <div class="form-group">
         <label for="jobUrl">Job URL</label>
-        <div class="input-with-icon">
-          <span class="input-icon">🔗</span>
-          <input 
-            type="url" 
-            id="jobUrl" 
-            name="jobUrl" 
-            placeholder="https://..."
-            autocomplete="off"
-          >
-        </div>
+        <input 
+          type="url" 
+          id="jobUrl" 
+          name="jobUrl" 
+          placeholder="https://..."
+          autocomplete="off"
+        >
       </div>
 
       <div class="form-group">
@@ -117,11 +111,9 @@
       <!-- Action Buttons -->
       <div class="action-buttons">
         <button type="button" id="extractBtn" class="btn btn-secondary btn-block">
-          <span class="btn-icon">🔍</span>
           <span>Auto-Extract</span>
         </button>
         <button type="submit" id="saveBtn" class="btn btn-primary btn-block">
-          <span class="btn-icon">💾</span>
           <span>Save to JobRoom</span>
         </button>
       </div>

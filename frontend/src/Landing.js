@@ -8,7 +8,6 @@ function Landing({ onGetStarted }) {
       <nav className="landing-nav">
         <div className="nav-container">
           <div className="nav-logo">
-            <span className="logo-icon">📋</span>
             <span className="logo-text">JobRoom</span>
           </div>
           <div className="nav-links">
@@ -89,37 +88,31 @@ function Landing({ onGetStarted }) {
           
           <div className="features-grid">
             <div className="feature-card">
-              <div className="feature-icon">📊</div>
               <h3>Dashboard Analytics</h3>
               <p>Track your application pipeline with real-time statistics and insights.</p>
             </div>
             
             <div className="feature-card">
-              <div className="feature-icon">🔌</div>
               <h3>Chrome Extension</h3>
               <p>Auto-extract job details from LinkedIn, Indeed, and 10+ job boards instantly.</p>
             </div>
             
             <div className="feature-card">
-              <div className="feature-icon">🔐</div>
               <h3>Secure & Private</h3>
               <p>Your data is encrypted and stored securely. Only you can access it.</p>
             </div>
             
             <div className="feature-card">
-              <div className="feature-icon">📧</div>
               <h3>Email Verification</h3>
               <p>Secure account creation with email verification codes.</p>
             </div>
             
             <div className="feature-card">
-              <div className="feature-icon">📝</div>
               <h3>Rich Profiles</h3>
               <p>Store company info, contacts, salary ranges, and personal notes.</p>
             </div>
             
             <div className="feature-card">
-              <div className="feature-icon">📱</div>
               <h3>Fully Responsive</h3>
               <p>Access your applications from any device, anywhere.</p>
             </div>
@@ -177,7 +170,6 @@ function Landing({ onGetStarted }) {
         <div className="footer-container">
           <div className="footer-brand">
             <div className="nav-logo">
-              <span className="logo-icon">📋</span>
               <span className="logo-text">JobRoom</span>
             </div>
             <p>Track your job applications with style.</p>
@@ -200,7 +192,7 @@ function Landing({ onGetStarted }) {
             
             <div className="footer-column">
               <h4>Connect</h4>
-              <a href="mailto:support@jobroom.com">Contact</a>
+              <a href="mailto:jobroom.info@gmail.com">Contact</a>
               <a href="#" onClick={(e) => { e.preventDefault(); onGetStarted(); }}>Support</a>
             </div>
           </div>

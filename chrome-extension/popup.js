@@ -1,12 +1,79 @@
 const API_URL = 'http://localhost:8000/api';
 
-document.addEventListener('DOMContentLoaded', () => {
+// Check token on popup open
+document.addEventListener('DOMContentLoaded', async () => {
+  const token = await getToken();
+  
+  if (!token) {
+    // No token - show login prompt
+    showLoginPrompt();
+  } else {
+    // Validate token is still good
+    const valid = await validateToken(token);
+    if (!valid) {
+      showLoginPrompt();
+    } else {
+      // Token valid - initialize form
+      initializeForm();
+    }
+  }
+});
+
+function showLoginPrompt() {
+  const container = document.querySelector('.container');
+  container.innerHTML = `
+    <div class="login-prompt">
+      <h2>Login Required</h2>
+      <p>Please log in to JobRoom to save jobs</p>
+      <button id="openJobRoom" class="btn btn-primary btn-block">
+        Open JobRoom
+      </button>
+      <button id="refreshToken" class="btn btn-secondary btn-block" style="margin-top: 0.5rem">
+        I'm Logged In (Refresh)
+      </button>
+    </div>
+  `;
+  
+  document.getElementById('openJobRoom').addEventListener('click', () => {
+    chrome.tabs.create({ url: 'http://localhost:3000' });
+    window.close();
+  });
+  
+  document.getElementById('refreshToken').addEventListener('click', async () => {
+    await syncTokenFromWeb();
+  });
+}
+
+async function syncTokenFromWeb() {
+  try {
+    const tabs = await chrome.tabs.query({ url: 'http://localhost:3000/*' });
+    if (tabs.length > 0) {
+      // Inject content script to get token
+      await chrome.scripting.executeScript({
+        target: { tabId: tabs[0].id },
+        func: () => localStorage.getItem('token')
+      }, (results) => {
+        if (results && results[0]?.result) {
+          const token = results[0].result;
+          if (token) {
+            chrome.storage.local.set({ token }, () => {
+              location.reload();
+            });
+          }
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Sync error:', error);
+  }
+}
+
+async function initializeForm() {
   const form = document.getElementById('jobForm');
   const extractBtn = document.getElementById('extractBtn');
   const saveBtn = document.getElementById('saveBtn');
   const statusEl = document.getElementById('status');
   const notLoggedInEl = document.getElementById('notLoggedIn');
-  const openLoginBtn = document.getElementById('openLogin');
   const extractedBanner = document.getElementById('extractedBanner');
   
   // Form fields
@@ -18,11 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const notesInput = document.getElementById('notes');
 
   // Initialize
-  init();
-});
-
-async function init() {
-  await checkToken();
   await loadSavedData();
   await autoExtractOnLoad();
   
@@ -33,27 +95,11 @@ async function init() {
   }
   
   // Event listeners
-  document.getElementById('extractBtn').addEventListener('click', () => extractData(true));
-  document.getElementById('jobForm').addEventListener('submit', async (e) => {
+  extractBtn.addEventListener('click', () => extractData(true));
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     await saveJob();
   });
-  document.getElementById('openLogin').addEventListener('click', () => {
-    chrome.tabs.create({ url: 'http://localhost:3000' });
-  });
-}
-
-async function checkToken() {
-  const token = await getToken();
-  if (!token) {
-    showNotLoggedIn();
-  }
-}
-
-function showNotLoggedIn() {
-  document.getElementById('notLoggedIn').style.display = 'block';
-  document.getElementById('jobForm').style.display = 'none';
-  document.getElementById('extractBtn').parentElement.style.display = 'none';
 }
 
 async function loadSavedData() {
@@ -84,7 +130,6 @@ async function autoExtractOnLoad() {
                     hostname.includes('position');
   
   if (isJobSite || isJobPage) {
-    // Small delay to ensure page is fully loaded
     setTimeout(() => extractData(false), 500);
   }
 }
@@ -114,13 +159,12 @@ async function extractData(showNotification = true) {
         showExtractedBanner();
         
         if (showNotification) {
-          showStatus('✅ Data extracted!', 'success');
+          showStatus('Data extracted!', 'success');
         }
         
-        // Validate required fields
         if (!response.data.company || !response.data.position) {
           setTimeout(() => {
-            showStatus('⚠️ Please fill missing fields', 'error');
+            showStatus('Please fill missing fields', 'error');
           }, 2000);
         }
       } else {
@@ -136,27 +180,25 @@ async function extractData(showNotification = true) {
 async function saveJob() {
   const token = await getToken();
   if (!token) {
-    showNotLoggedIn();
+    showLoginPrompt();
     return;
   }
 
   const jobData = {
-    company_name: companyInput.value.trim(),
-    position_title: positionInput.value.trim(),
-    location: locationInput.value.trim() || undefined,
-    job_url: jobUrlInput.value.trim() || undefined,
-    salary_range: salaryInput.value.trim() || undefined,
-    notes: notesInput.value.trim() || undefined,
+    company_name: document.getElementById('company').value.trim(),
+    position_title: document.getElementById('position').value.trim(),
+    location: document.getElementById('location').value.trim() || undefined,
+    job_url: document.getElementById('jobUrl').value.trim() || undefined,
+    salary_range: document.getElementById('salary').value.trim() || undefined,
+    notes: document.getElementById('notes').value.trim() || undefined,
     status: 'wanted'
   };
 
-  // Validate required fields
   if (!jobData.company_name || !jobData.position_title) {
-    showStatus('⚠️ Fill Company & Position', 'error');
+    showStatus('Fill Company & Position', 'error');
     return;
   }
 
-  // Set loading state
   const btn = document.getElementById('saveBtn');
   btn.disabled = true;
   btn.classList.add('loading');
@@ -172,8 +214,8 @@ async function saveJob() {
     });
 
     if (response.ok) {
-      showStatus('✅ Saved to JobRoom!', 'success');
-      form.reset();
+      showStatus('Saved to JobRoom!', 'success');
+      document.getElementById('jobForm').reset();
       chrome.storage.local.remove(['jobData']);
       hideExtractedBanner();
     } else {
@@ -190,15 +232,16 @@ async function saveJob() {
 }
 
 function fillForm(data) {
-  if (data.company) companyInput.value = data.company;
-  if (data.position) positionInput.value = data.position;
-  if (data.location) locationInput.value = data.location;
-  if (data.url) jobUrlInput.value = data.url;
-  if (data.salary) salaryInput.value = data.salary;
-  if (data.notes) notesInput.value = data.notes;
+  if (data.company) document.getElementById('company').value = data.company;
+  if (data.position) document.getElementById('position').value = data.position;
+  if (data.location) document.getElementById('location').value = data.location;
+  if (data.url) document.getElementById('jobUrl').value = data.url;
+  if (data.salary) document.getElementById('salary').value = data.salary;
+  if (data.notes) document.getElementById('notes').value = data.notes;
 }
 
 function showStatus(message, type) {
+  const statusEl = document.getElementById('status');
   statusEl.textContent = message;
   statusEl.className = `status ${type}`;
   setTimeout(() => {
@@ -224,4 +267,15 @@ async function getToken() {
       resolve(result.token);
     });
   });
+}
+
+async function validateToken(token) {
+  try {
+    const response = await fetch(`${API_URL}/auth/me`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
