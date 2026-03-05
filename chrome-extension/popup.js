@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8000/api';
+const API_URL = 'https://jobroom-api.onrender.com/api';
 
 // Check token on popup open
 document.addEventListener('DOMContentLoaded', async () => {
@@ -34,7 +34,7 @@ function showLoginPrompt() {
   `;
   
   document.getElementById('openJobRoom').addEventListener('click', () => {
-    chrome.tabs.create({ url: 'http://localhost:3000' });
+    chrome.tabs.create({ url: 'https://frontend-7xxwj55n6-davidhtg44s-projects.vercel.app' });
   });
   
   document.getElementById('refreshToken').addEventListener('click', async () => {
@@ -43,7 +43,7 @@ function showLoginPrompt() {
     btn.disabled = true;
     
     try {
-      const tabs = await chrome.tabs.query({ url: 'http://localhost:3000/*' });
+      const tabs = await chrome.tabs.query({ url: 'https://frontend-7xxwj55n6-davidhtg44s-projects.vercel.app/*' });
       
       if (tabs.length === 0) {
         showPromptStatus('Please open JobRoom first', 'error');

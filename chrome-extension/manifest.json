@@ -10,8 +10,8 @@
     "scripting"
   ],
   "host_permissions": [
-    "http://localhost:8000/*",
-    "http://localhost:3000/*"
+    "https://jobroom-api.onrender.com/*",
+    "https://frontend-7xxwj55n6-davidhtg44s-projects.vercel.app/*"
   ],
   "action": {
     "default_popup": "popup.html",
