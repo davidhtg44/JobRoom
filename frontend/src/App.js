@@ -13,6 +13,7 @@ function App() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showLegal, setShowLegal] = useState(null); // null, 'privacy', 'terms', 'cookies', 'legal', 'faq'
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [formData, setFormData] = useState({
@@ -106,8 +107,7 @@ function App() {
       });
       if (response.ok) {
         const data = await response.json();
-        setSuccess(`Verification code sent to ${authData.email}. Check console for debug code.`);
-        console.log('📧 Verification code:', data.debug_code);
+        setSuccess(`Verification code sent to ${authData.email}. Please check your inbox (and spam folder).`);
         setAuthView('verify');
       } else {
         const errorData = await response.json();
@@ -144,6 +144,23 @@ function App() {
       } else {
         const errorData = await response.json();
         setError(errorData.detail || 'Verification failed');
+      }
+    } catch (error) {
+      setError('Connection error.');
+    }
+  };
+
+  const handleResendCode = async () => {
+    setError('');
+    try {
+      const response = await fetch(`${API_URL}/auth/resend-code?email=${encodeURIComponent(authData.email)}`, {
+        method: 'POST'
+      });
+      if (response.ok) {
+        setSuccess('Verification code resent! Please check your inbox.');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.detail || 'Failed to resend code');
       }
     } catch (error) {
       setError('Connection error.');
@@ -449,10 +466,19 @@ function App() {
                 />
               </div>
               <button type="submit" className="auth-btn">Verify & Create Account</button>
-              <button 
-                type="button" 
+              <button
+                type="button"
+                className="auth-btn auth-btn-secondary"
+                onClick={handleResendCode}
+                style={{ marginTop: '0.5rem' }}
+              >
+                📧 Resend Code
+              </button>
+              <button
+                type="button"
                 className="auth-btn auth-btn-secondary"
                 onClick={() => setAuthView('register')}
+                style={{ marginTop: '0.5rem' }}
               >
                 Back
               </button>
@@ -710,6 +736,48 @@ function App() {
         </div>
       </main>
 
+      {/* Footer */}
+      <footer className="app-footer">
+        <div className="footer-content">
+          <div className="footer-section">
+            <h4>JobRoom</h4>
+            <ul>
+              <li><a href="#" onClick={(e) => { e.preventDefault(); setShowLegal('privacy'); }}>Privacy Policy</a></li>
+              <li><a href="#" onClick={(e) => { e.preventDefault(); setShowLegal('terms'); }}>Terms of Service</a></li>
+              <li><a href="#" onClick={(e) => { e.preventDefault(); setShowLegal('cookies'); }}>Cookie Policy</a></li>
+              <li><a href="#" onClick={(e) => { e.preventDefault(); setShowLegal('legal'); }}>Legal Notice</a></li>
+            </ul>
+          </div>
+          <div className="footer-section">
+            <h4>Product</h4>
+            <ul>
+              <li><a href="#" onClick={(e) => { e.preventDefault(); setShowForm(true); }}>Add Application</a></li>
+              <li><a href="#" onClick={(e) => { e.preventDefault(); setShowSettings(true); }}>Settings</a></li>
+              <li><a href="https://github.com/davidhtg44/JobRoom" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+            </ul>
+          </div>
+          <div className="footer-section">
+            <h4>Support</h4>
+            <ul>
+              <li><a href="mailto:support@jobroom.com">Contact Us</a></li>
+              <li><a href="#" onClick={(e) => { e.preventDefault(); setShowLegal('faq'); }}>FAQ</a></li>
+            </ul>
+          </div>
+          <div className="footer-section">
+            <h4>Connect</h4>
+            <div className="footer-social">
+              <a href="#" title="GitHub">🐙</a>
+              <a href="#" title="Twitter">🐦</a>
+              <a href="#" title="LinkedIn">💼</a>
+            </div>
+          </div>
+        </div>
+        <div className="footer-bottom">
+          <p>&copy; {new Date().getFullYear()} JobRoom. All rights reserved.</p>
+          <p>Track your job applications with style.</p>
+        </div>
+      </footer>
+
       {/* Settings Modal */}
       {showSettings && (
         <div className="modal-overlay" onClick={() => setShowSettings(false)}>
@@ -788,6 +856,176 @@ function App() {
                 <button type="button" className="btn-secondary" onClick={() => setShowSettings(false)}>Cancel</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Legal Modals */}
+      {showLegal && (
+        <div className="modal-overlay legal-modal" onClick={() => setShowLegal(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>
+                {showLegal === 'privacy' && 'Privacy Policy'}
+                {showLegal === 'terms' && 'Terms of Service'}
+                {showLegal === 'cookies' && 'Cookie Policy'}
+                {showLegal === 'legal' && 'Legal Notice'}
+                {showLegal === 'faq' && 'FAQ'}
+              </h2>
+              <button className="btn-close" onClick={() => setShowLegal(null)}>×</button>
+            </div>
+            <div className="legal-content">
+              {showLegal === 'privacy' && (
+                <>
+                  <h2>Privacy Policy</h2>
+                  <p>At JobRoom, we take your privacy seriously. This Privacy Policy explains how we collect, use, and protect your personal information.</p>
+                  
+                  <h3>1. Information We Collect</h3>
+                  <p>We collect information you provide directly to us, including:</p>
+                  <ul>
+                    <li>Email address and password for account creation</li>
+                    <li>Profile information (name, phone, bio)</li>
+                    <li>Job application data you submit</li>
+                  </ul>
+                  
+                  <h3>2. How We Use Your Information</h3>
+                  <p>We use the information we collect to:</p>
+                  <ul>
+                    <li>Provide, maintain, and improve our services</li>
+                    <li>Send you technical notices and support messages</li>
+                    <li>Respond to your comments and questions</li>
+                  </ul>
+                  
+                  <h3>3. Data Security</h3>
+                  <p>We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.</p>
+                  
+                  <h3>4. Your Rights</h3>
+                  <p>You have the right to access, update, or delete your personal information at any time through your account settings.</p>
+                  
+                  <h3>5. Contact Us</h3>
+                  <p>If you have any questions about this Privacy Policy, please contact us at support@jobroom.com.</p>
+                  
+                  <p className="legal-updated">Last updated: March 2024</p>
+                </>
+              )}
+              
+              {showLegal === 'terms' && (
+                <>
+                  <h2>Terms of Service</h2>
+                  <p>Welcome to JobRoom! These Terms of Service govern your use of our job application tracking platform.</p>
+                  
+                  <h3>1. Acceptance of Terms</h3>
+                  <p>By accessing and using JobRoom, you accept and agree to be bound by these Terms of Service.</p>
+                  
+                  <h3>2. Use License</h3>
+                  <p>Permission is granted to temporarily use JobRoom for personal job tracking purposes only.</p>
+                  
+                  <h3>3. User Responsibilities</h3>
+                  <p>You agree to:</p>
+                  <ul>
+                    <li>Provide accurate and complete information</li>
+                    <li>Maintain the security of your account</li>
+                    <li>Not use the service for any illegal purposes</li>
+                    <li>Not attempt to access other users' data</li>
+                  </ul>
+                  
+                  <h3>4. Disclaimer</h3>
+                  <p>JobRoom is provided "as is" without any warranties, express or implied.</p>
+                  
+                  <h3>5. Limitation of Liability</h3>
+                  <p>JobRoom shall not be liable for any indirect, incidental, special, consequential, or punitive damages.</p>
+                  
+                  <h3>6. Changes to Terms</h3>
+                  <p>We reserve the right to modify these terms at any time. Continued use constitutes acceptance of modified terms.</p>
+                  
+                  <p className="legal-updated">Last updated: March 2024</p>
+                </>
+              )}
+              
+              {showLegal === 'cookies' && (
+                <>
+                  <h2>Cookie Policy</h2>
+                  <p>This Cookie Policy explains how JobRoom uses cookies and similar technologies.</p>
+                  
+                  <h3>1. What Are Cookies</h3>
+                  <p>Cookies are small text files stored on your device when you visit our website.</p>
+                  
+                  <h3>2. Cookies We Use</h3>
+                  <ul>
+                    <li><strong>Authentication cookies:</strong> To keep you logged in</li>
+                    <li><strong>Session cookies:</strong> To maintain your session</li>
+                    <li><strong>Local storage:</strong> To store your preferences and token</li>
+                  </ul>
+                  
+                  <h3>3. How to Control Cookies</h3>
+                  <p>You can control cookies through your browser settings. However, disabling cookies may affect your ability to use certain features.</p>
+                  
+                  <h3>4. Third-Party Cookies</h3>
+                  <p>We do not use third-party cookies on JobRoom.</p>
+                  
+                  <p className="legal-updated">Last updated: March 2024</p>
+                </>
+              )}
+              
+              {showLegal === 'legal' && (
+                <>
+                  <h2>Legal Notice</h2>
+                  
+                  <h3>Company Information</h3>
+                  <p><strong>JobRoom</strong><br/>
+                  Job Application Tracking Platform</p>
+                  
+                  <h3>Contact Information</h3>
+                  <p>Email: support@jobroom.com</p>
+                  
+                  <h3>Registered Office</h3>
+                  <p>Available upon request</p>
+                  
+                  <h3>VAT Number</h3>
+                  <p>Available upon request</p>
+                  
+                  <h3>Director</h3>
+                  <p>Available upon request</p>
+                  
+                  <h3>Intellectual Property</h3>
+                  <p>All content, trademarks, logos, and intellectual property displayed on JobRoom are the property of their respective owners.</p>
+                  
+                  <h3>Governing Law</h3>
+                  <p>These terms shall be governed by and construed in accordance with applicable laws.</p>
+                  
+                  <p className="legal-updated">Last updated: March 2024</p>
+                </>
+              )}
+              
+              {showLegal === 'faq' && (
+                <>
+                  <h2>Frequently Asked Questions</h2>
+                  
+                  <h3>How do I get started?</h3>
+                  <p>Simply create an account, verify your email, and start adding job applications!</p>
+                  
+                  <h3>Is JobRoom free?</h3>
+                  <p>Yes, JobRoom is completely free to use.</p>
+                  
+                  <h3>How do I use the Chrome extension?</h3>
+                  <p>Install the extension from the chrome-extension folder, navigate to a job posting, click the extension icon, and let it auto-extract the job details.</p>
+                  
+                  <h3>Can I export my data?</h3>
+                  <p>Currently, data is stored in your account. Export functionality is planned for future releases.</p>
+                  
+                  <h3>How do I reset my password?</h3>
+                  <p>Contact support@jobroom.com for password reset assistance.</p>
+                  
+                  <h3>Is my data secure?</h3>
+                  <p>Yes, we use industry-standard security measures including password hashing and JWT authentication.</p>
+                  
+                  <h3>Can I use JobRoom on mobile?</h3>
+                  <p>Yes, JobRoom is fully responsive and works on all devices.</p>
+                  
+                  <p className="legal-updated">Last updated: March 2024</p>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

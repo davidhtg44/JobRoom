@@ -8,13 +8,19 @@ from datetime import datetime, timedelta
 import bcrypt
 import random
 import string
+import os
 from jose import JWTError, jwt
 from models import get_db, JobApplication, User, ApplicationStatus, VerificationCode
 
 # Security settings
-SECRET_KEY = "your-secret-key-change-in-production"
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# Email settings
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
+FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@jobroom.com")
+USE_EMAIL_SERVICE = bool(SENDGRID_API_KEY and SENDGRID_API_KEY != "your-sendgrid-api-key")
 
 app = FastAPI(title="JobRoom - Job Application Tracker")
 
@@ -35,6 +41,61 @@ def verify_password(plain_password, hashed_password):
 
 def get_password_hash(password):
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+
+def send_verification_email(email: str, code: str):
+    """Send verification code via email using SendGrid"""
+    if not USE_EMAIL_SERVICE:
+        # Development mode: log to console
+        print(f"📧 [DEV MODE] Verification code for {email}: {code}")
+        return True
+    
+    try:
+        import sendgrid
+        from sendgrid.helpers.mail import Mail
+        
+        sg = sendgrid.SendGridAPIClient(api_key=SENDGRID_API_KEY)
+        
+        subject = "JobRoom - Your Verification Code"
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 30px; text-align: center;">
+                <h1 style="color: white; margin: 0;">JobRoom</h1>
+                <p style="color: rgba(255,255,255,0.8);">Your Verification Code</p>
+            </div>
+            <div style="padding: 30px; background: #f8fafc;">
+                <p>Hello,</p>
+                <p>Thank you for registering with JobRoom. Your verification code is:</p>
+                <div style="background: #1a1a2e; color: white; font-size: 32px; font-weight: bold; padding: 20px; border-radius: 8px; text-align: center; letter-spacing: 8px; margin: 20px 0;">
+                    {code}
+                </div>
+                <p>This code will expire in 15 minutes.</p>
+                <p>If you didn't request this code, please ignore this email.</p>
+            </div>
+            <div style="padding: 20px; text-align: center; color: #64748b; font-size: 12px;">
+                <p>&copy; 2024 JobRoom. All rights reserved.</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        message = Mail(
+            from_email=FROM_EMAIL,
+            to_emails=email,
+            subject=subject,
+            html_content=html_content
+        )
+        
+        response = sg.send(message)
+        print(f"📧 Email sent to {email}, status code: {response.status_code}")
+        return response.status_code == 202
+        
+    except Exception as e:
+        print(f"❌ Error sending email: {str(e)}")
+        # Fallback to console
+        print(f"📧 [FALLBACK] Verification code for {email}: {code}")
+        return True
 
 
 def generate_verification_code():
@@ -183,14 +244,12 @@ def register_init(user_data: UserRegister, db: Session = Depends(get_db)):
     db.add(verification)
     db.commit()
     
-    # In production, send email here. For now, return code for testing.
-    print(f"📧 Verification code for {user_data.email}: {code}")
+    # Send verification email
+    send_verification_email(user_data.email, code)
     
     return {
         "message": "Verification code sent to email",
-        "email": user_data.email,
-        # Remove in production:
-        "debug_code": code
+        "email": user_data.email
     }
 
 
@@ -288,17 +347,17 @@ def resend_code(email: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
     if user and user.is_verified:
         raise HTTPException(status_code=400, detail="Email already verified")
-    
+
     # Generate new code
     code = generate_verification_code()
     expires_at = datetime.utcnow() + timedelta(minutes=15)
-    
+
     # Invalidate old codes
     db.query(VerificationCode).filter(
         VerificationCode.email == email,
         VerificationCode.is_used == False
     ).delete()
-    
+
     verification = VerificationCode(
         email=email,
         code=code,
@@ -307,12 +366,12 @@ def resend_code(email: str, db: Session = Depends(get_db)):
     )
     db.add(verification)
     db.commit()
-    
-    print(f"📧 New verification code for {email}: {code}")
-    
+
+    # Send verification email
+    send_verification_email(email, code)
+
     return {
-        "message": "Verification code resent",
-        "debug_code": code
+        "message": "Verification code resent to email"
     }
 
 
