@@ -409,6 +409,16 @@ function App() {
     setShowForm(false);
   };
 
+  const toggleForm = () => {
+    setShowForm(!showForm);
+    // Scroll to form on mobile for better UX
+    if (!showForm) {
+      setTimeout(() => {
+        window.scrollTo({ top: 100, behavior: 'smooth' });
+      }, 100);
+    }
+  };
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -665,21 +675,17 @@ function App() {
           <h1>JobRoom</h1>
         </div>
         <div className="user-menu">
-  {/* Nascondiamo le info testuali su schermi molto piccoli per far spazio ai tasti */}
-  <div className="user-info mobile-hide">
-    <div className="user-name">{user.full_name || 'User'}</div>
-    <div className="user-email">{user.email}</div>
-  </div>
-  <div className="user-actions">
-    <button className="btn-secondary btn-sm" onClick={() => setShowSettings(true)}>
-      {/* Usiamo un'icona o testo breve */}
-      ⚙️ <span className="mobile-hide">Settings</span>
-    </button>
-    <button className="btn-logout" onClick={logout}>
-      Logout
-    </button>
-  </div>
-</div>
+          <div className="user-info">
+            <div className="user-name">{user.full_name || 'User'}</div>
+            <div className="user-email">{user.email}</div>
+          </div>
+          <button className="btn-secondary btn-sm" onClick={() => setShowSettings(true)} title="Settings">
+            ⚙️ <span className="btn-text">Settings</span>
+          </button>
+          <button className="btn-logout" onClick={logout} title="Logout">
+            🚪 <span className="btn-text">Logout</span>
+          </button>
+        </div>
       </header>
 
       <main className="main-content">
@@ -711,7 +717,7 @@ function App() {
         <div className="content-card">
           <div className="card-header">
             <h2>Applications {applications.length > 0 && `(${applications.length})`}</h2>
-            <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
+            <button className="btn-primary" onClick={toggleForm}>
               {showForm ? 'Cancel' : '+ Add Application'}
             </button>
           </div>
