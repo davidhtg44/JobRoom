@@ -17,15 +17,15 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 # Copia del codice backend
 COPY backend/ ./backend/
 
-# Copia della build di React dentro la cartella del backend
-# Nota: il tuo Python dovrà servire i file da qui
+# Copia della build di React
+# Questa riga sposta i file di React dove Python può vederli
 COPY --from=build-frontend /app/frontend/build ./backend/static
 
-# Variabili d'ambiente
+# Variabili d'ambiente (CORRETTE)
 ENV PYTHONUNBUFFERED=1
-PORT=8080
+ENV PORT=8080
 
 EXPOSE 8080
 
-# Comando per avviare il server (Assumendo che usi main.py)
+# Comando per avviare il server
 CMD ["python", "backend/main.py"]
