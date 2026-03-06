@@ -8,9 +8,11 @@ env/
 venv/
 ENV/
 *.db
+*.log
 
 # Node
 node_modules/
+build/
 npm-debug.log
 yarn-error.log
 
@@ -19,8 +21,32 @@ yarn-error.log
 .vscode/
 *.swp
 *.swo
+*~
 .DS_Store
 
 # Environment
 .env
 .env.local
+.env.*.local
+
+# Docker
+*.tar
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Documentation
+docs/_build/
+
+# Fly.io
+.fly/
+
+# Chrome Extension
+chrome-extension/build/

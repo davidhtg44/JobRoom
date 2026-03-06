@@ -3,10 +3,17 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
 import enum
+import os
 
-DATABASE_URL = "sqlite:///./job_applications.db"
+# Database URL - configurable for production
+# For Fly.io: sqlite:////app/data/job_applications.db
+# For local development: sqlite:///./job_applications.db
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////app/data/job_applications.db")
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

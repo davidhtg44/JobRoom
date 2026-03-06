@@ -2,129 +2,305 @@
 
 > **Professional Job Application Tracking Platform**
 
-A secure, multi-user web application to manage your job search. Track applications, contacts, and interview progress with a clean, professional interface.
+A secure, multi-user web application to manage your job search with a clean, professional interface and Chrome extension for quick job saving.
 
-## Features
+**Live Demo:** https://jobroom.fly.dev
 
-- 🔐 **User Authentication** - Secure login/register with JWT tokens
-- 👤 **Multi-User Support** - Each user has their own private data
-- 📧 **Email Verification** - Verify emails during registration (Gmail SMTP)
-- 📊 **Dashboard Stats** - Quick overview of your application pipeline
-- 📝 **Full CRUD** - Add, edit, and delete applications
-- 🏷️ **Status Tracking** - Track applications through your pipeline
-- 🔗 **Job Links** - Store direct links to job postings
-- 👤 **Contact Management** - Keep track of recruiters
-- 📱 **Responsive Design** - Works on all devices
-- 🔌 **Chrome Extension** - Auto-extract job data from any job board
+---
 
-## Tech Stack
+## ✨ Features
 
-- **Frontend:** React 18 + CSS3
-- **Backend:** Python + FastAPI
-- **Database:** SQLite
-- **Authentication:** JWT (JSON Web Tokens)
-- **Password Security:** Bcrypt hashing
-- **Email:** Gmail SMTP
+- 🔐 **User Authentication** - Secure JWT-based auth with bcrypt password hashing
+- 📧 **Email Verification** - Verify emails during registration
+- 🔑 **Password Recovery** - Reset password via email code
+- 📊 **Dashboard Analytics** - Track your application pipeline
+- 🔌 **Chrome Extension** - Auto-extract job details from 12+ job boards
+- 📱 **Mobile Responsive** - Works perfectly on all devices
+- 🎨 **Professional UI** - Clean, modern Swiss design
 
-## Quick Start
+---
 
-### 1. Install Backend Dependencies
+## 🚀 Quick Start
+
+### Local Development
+
+#### Backend
 
 ```bash
 cd backend
+
+# Install dependencies
 pip install -r requirements.txt
-```
 
-### 2. Configure Email (Optional)
+# Create .env file
+cp .env.example .env
+# Edit .env with your SMTP credentials
 
-To receive verification codes via email:
-
-1. Create `.env` file in `backend/` folder
-2. Add your Gmail credentials (see `backend/GMAIL_SETUP.md`)
-
-```bash
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your.email@gmail.com
-SMTP_PASS=your-app-password
-FROM_EMAIL=your.email@gmail.com
-```
-
-**Without configuration:** Codes are logged to console (dev mode)
-
-### 3. Start the Backend
-
-```bash
-cd backend
+# Run server
 python3 -m uvicorn main:app --reload
 ```
 
-Backend runs on: **http://localhost:8000**
+Backend runs on: http://localhost:8000
+API Docs: http://localhost:8000/docs
 
-API documentation: **http://localhost:8000/docs**
-
-### 3. Install Frontend Dependencies
+#### Frontend
 
 ```bash
 cd frontend
+
+# Install dependencies
 npm install
-```
 
-### 4. Start the Frontend
-
-```bash
-cd frontend
+# Start dev server
 npm start
 ```
 
-Frontend runs on: **http://localhost:3000**
+Frontend runs on: http://localhost:3000
 
-## API Endpoints
+---
+
+## 📦 Deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for complete Fly.io deployment guide.
+
+### Quick Deploy
+
+```bash
+# Backend
+cd backend
+fly launch
+fly volumes create jobroom_data --region fra --size 1
+fly secrets set SECRET_KEY=$(openssl rand -hex 32)
+fly secrets set SMTP_USER=your-email@gmail.com
+fly secrets set SMTP_PASS=your-app-password
+fly deploy
+
+# Frontend
+cd ../frontend
+fly launch
+fly deploy
+```
+
+---
+
+## 📁 Project Structure
+
+```
+job_tracker/
+├── backend/
+│   ├── main.py              # FastAPI application
+│   ├── models.py            # SQLAlchemy models
+│   ├── requirements.txt     # Python dependencies
+│   ├── Dockerfile           # Production container
+│   ├── fly.toml            # Fly.io config
+│   └── .env.example        # Environment template
+├── frontend/
+│   ├── src/
+│   │   ├── App.js          # Main app component
+│   │   ├── App.css         # App styles
+│   │   ├── Landing.js      # Landing page
+│   │   ├── Landing.css     # Landing styles
+│   │   └── index.js        # Entry point
+│   ├── public/
+│   │   └── index.html
+│   ├── Dockerfile          # Production container
+│   ├── nginx.conf          # Nginx config
+│   ├── fly.toml           # Fly.io config
+│   └── package.json
+├── chrome-extension/
+│   ├── manifest.json
+│   ├── popup.html
+│   ├── popup.css
+│   ├── popup.js
+│   └── content.js
+├── DEPLOYMENT.md           # Deployment guide
+└── README.md
+```
+
+---
+
+## 🔌 Chrome Extension
+
+Auto-extract job details from LinkedIn, Indeed, Glassdoor, and 10+ job boards.
+
+### Install
+
+1. Open Chrome → `chrome://extensions/`
+2. Enable **Developer mode**
+3. Click **Load unpacked**
+4. Select `chrome-extension` folder
+
+### Usage
+
+1. Navigate to any job posting
+2. Click extension icon
+3. Click **Auto-Extract**
+4. Click **Save to JobRoom**
+
+---
+
+## 🛡️ Security
+
+- **Password Hashing:** bcrypt with salt
+- **Authentication:** JWT tokens (30min expiry)
+- **Email Verification:** 6-digit codes (15min expiry)
+- **Password Reset:** Secure email-based reset
+- **CORS:** Configured for production domains
+- **HTTPS:** Enforced in production
+
+---
+
+## 📊 API Endpoints
 
 ### Authentication
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/auth/register` | Register new user |
+| POST | `/api/auth/register/verify` | Verify registration code |
 | POST | `/api/auth/login` | Login user |
 | GET | `/api/auth/me` | Get current user |
+| PUT | `/api/auth/me` | Update profile |
+| POST | `/api/auth/password-reset/request` | Request reset code |
+| POST | `/api/auth/password-reset/verify` | Reset password |
 
 ### Applications
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/applications` | Get all applications (user's only) |
+| GET | `/api/applications` | Get all applications |
 | GET | `/api/applications/{id}` | Get single application |
 | POST | `/api/applications` | Create application |
 | PUT | `/api/applications/{id}` | Update application |
 | DELETE | `/api/applications/{id}` | Delete application |
 
-## Usage
+---
 
-1. Open http://localhost:3000
-2. Register a new account or login
-3. Click "+ Add Application" to start tracking
-4. Manage your applications with the table actions
+## 🧰 Tech Stack
 
-## Data Fields
+**Backend:**
+- Python 3.11
+- FastAPI
+- SQLAlchemy (SQLite)
+- Bcrypt
+- Python-JOSE (JWT)
+- SMTPLib (Email)
 
-| Field | Description |
-|-------|-------------|
-| Company Name | The company name |
-| Position Title | The role you're applying for |
-| Job URL | Link to the job posting |
-| Status | Current status (Wanted, Applied, Interview, Offer, Rejected, Withdrawn) |
-| Location | Job location |
-| Salary Range | Expected/posted salary |
-| Contact Name | Recruiter/hiring manager name |
-| Contact Email | Contact email address |
-| Date Applied | Application submission date |
-| Notes | Additional notes |
+**Frontend:**
+- React 18
+- CSS3 (Mobile-first)
+- Bootstrap 5
 
-## Security Notes
+**Infrastructure:**
+- Fly.io (Deployment)
+- Docker (Containerization)
+- Nginx (Reverse Proxy)
 
-⚠️ **For Production:** Change the `SECRET_KEY` in `main.py` to a secure random value.
+---
 
-## License
+## 📝 Environment Variables
 
-MIT License
+### Backend (.env)
+
+```bash
+# Security
+SECRET_KEY=your-secret-key-here
+
+# Email (Gmail)
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+FROM_EMAIL=your-email@gmail.com
+
+# CORS
+ALLOWED_ORIGINS=https://jobroom.fly.dev,https://jobroom-api.fly.dev
+
+# Database (Fly.io)
+DATABASE_URL=sqlite:////app/data/job_applications.db
+```
+
+---
+
+## 🧪 Testing
+
+### Test Registration
+
+```bash
+curl -X POST http://localhost:8000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@example.com", "password": "test123"}'
+```
+
+### Test Login
+
+```bash
+curl -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@example.com", "password": "test123"}'
+```
+
+### Test Health Check
+
+```bash
+curl http://localhost:8000/api/health
+```
+
+---
+
+## 📈 Monitoring
+
+```bash
+# View logs
+fly logs --app jobroom-api
+
+# Check status
+fly status
+
+# SSH into machine
+fly ssh console --app jobroom-api
+
+# Check database
+sqlite3 /app/data/job_applications.db
+```
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
+
+---
+
+## 📄 License
+
+MIT License - See LICENSE file for details
+
+---
+
+## 📞 Support
+
+- **Email:** jobroom.info@gmail.com
+- **Issues:** https://github.com/davidhtg44/JobRoom/issues
+- **Documentation:** https://github.com/davidhtg44/JobRoom/blob/main/DEPLOYMENT.md
+
+---
+
+## 🎯 Roadmap
+
+- [ ] Export applications to CSV/PDF
+- [ ] Email notifications for status changes
+- [ ] Calendar integration for interview scheduling
+- [ ] Resume storage and parsing
+- [ ] Job search aggregation
+- [ ] Mobile app (React Native)
+
+---
+
+**Made with ❤️ by David**
+
+Track your job applications with style.

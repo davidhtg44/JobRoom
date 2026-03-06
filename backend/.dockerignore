@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.db
+*.log
+.env
+.git/
+.gitignore
+*.md
+!requirements.txt
+!Dockerfile
+!fly.toml
