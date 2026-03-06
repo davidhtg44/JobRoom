@@ -706,54 +706,319 @@ body {
   border-top: 1px solid #e2e8f0;
 }
 
-/* Responsive */
+/* Responsive - Mobile First */
 @media (max-width: 768px) {
   .app-header {
-    padding: 1rem;
+    padding: 0.75rem;
   }
-  
+
+  .logo h1 {
+    font-size: 1.1rem;
+  }
+
+  .user-menu {
+    gap: 0.5rem;
+  }
+
+  .user-info {
+    display: none;
+  }
+
   .main-content {
-    padding: 1rem;
+    padding: 0.75rem;
   }
-  
+
   .stats-bar {
     flex-wrap: nowrap;
     overflow-x: auto;
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
   }
-  
+
   .stat-item {
-    min-width: 120px;
+    min-width: 80px;
+    padding: 0.75rem;
   }
-  
+
+  .stat-item .stat-value {
+    font-size: 1.25rem;
+  }
+
+  .stat-item .stat-label {
+    font-size: 0.65rem;
+  }
+
   .card-header {
     flex-direction: column;
     align-items: stretch;
+    gap: 0.75rem;
+    padding: 1rem;
   }
-  
+
+  .card-header h2 {
+    font-size: 1rem;
+  }
+
+  .form-panel {
+    padding: 1rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .form-group label {
+    font-size: 0.8rem;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+
+  /* Table to Cards on Mobile */
+  .table-responsive {
+    overflow-x: hidden;
+  }
+
   .data-table thead {
     display: none;
   }
-  
+
   .data-table tbody tr {
     display: block;
+    background: white;
     border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    margin-bottom: 1rem;
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
     padding: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   }
-  
+
   .data-table td {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding: 0.5rem 0;
     border-bottom: 1px solid #f1f5f9;
+    font-size: 0.9rem;
   }
-  
+
+  .data-table td:last-child {
+    border-bottom: none;
+  }
+
   .data-table td::before {
     content: attr(data-label);
     font-weight: 600;
     color: #64748b;
     text-transform: uppercase;
     font-size: 0.7rem;
+    margin-right: 1rem;
+  }
+
+  .company-cell {
+    min-width: auto;
+  }
+
+  .status-badge {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .btn-sm {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+
+  /* Footer Mobile */
+  .app-footer {
+    padding: 1.5rem 1rem;
+  }
+
+  .footer-content {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .footer-section {
+    text-align: center;
+  }
+
+  .footer-section h4 {
+    margin-bottom: 0.75rem;
+  }
+
+  .footer-section ul {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+
+  .footer-section li {
+    margin: 0;
+  }
+
+  .footer-social {
+    justify-content: center;
+  }
+
+  /* Modal Mobile */
+  .modal-overlay {
+    padding: 1rem;
+    align-items: flex-end;
+  }
+
+  .modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 16px 16px 0 0;
+    margin-bottom: 0;
+  }
+
+  .modal-header {
+    padding: 1rem;
+  }
+
+  .modal-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .settings-form {
+    padding: 1rem;
+  }
+
+  .legal-content {
+    padding: 1rem;
+    font-size: 0.9rem;
+  }
+
+  .legal-content h2 {
+    font-size: 1.25rem;
+  }
+
+  .legal-content h3 {
+    font-size: 1rem;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  .auth-container {
+    padding: 1rem;
+  }
+
+  .auth-card {
+    padding: 2rem 1.5rem;
+  }
+
+  .auth-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .header h1 {
+    font-size: 1.75rem;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .empty-state {
+    padding: 2rem 1rem;
+  }
+
+  .empty-state-icon {
+    font-size: 2.5rem;
+  }
+
+  .empty-state-text {
+    font-size: 0.9rem;
+  }
+}
+
+/* Landscape Mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  .auth-container {
+    align-items: flex-start;
+    padding-top: 2rem;
+  }
+
+  .auth-card {
+    padding: 1.5rem;
+  }
+
+  .stats-bar {
+    overflow-x: scroll;
+  }
+
+  .modal-overlay {
+    align-items: flex-start;
+  }
+
+  .modal-content {
+    max-height: 80vh;
+  }
+}
+
+/* Tablet */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .main-content {
+    padding: 1.5rem;
+  }
+
+  .stats-bar {
+    flex-wrap: wrap;
+  }
+
+  .stat-item {
+    min-width: 100px;
+    flex: 1;
+  }
+
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .footer-content {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+  .btn-primary,
+  .btn-secondary,
+  .btn-edit,
+  .btn-delete,
+  .auth-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    min-height: 44px;
+  }
+
+  .data-table td {
+    padding: 0.75rem 0;
   }
 }
