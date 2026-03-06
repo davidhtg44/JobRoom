@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import Landing from './Landing';
 
-// Production URL - update if needed
-fetch('/api/auth/password-reset/request')
+const API_URL = '/api';
 
 const STATUSES = ['wanted', 'applied', 'interview', 'offer', 'rejected', 'withdrawn'];
 
