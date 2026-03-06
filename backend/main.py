@@ -634,6 +634,24 @@ def delete_application(
 def get_statuses():
     return {"statuses": [status.value for status in ApplicationStatus]}
 
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+# ... (tutto il tuo codice precedente) ...
+
+# 1. Trova il percorso della cartella 'static' (creata dal Dockerfile)
+static_path = os.path.join(os.path.dirname(__file__), "static")
+
+# 2. Se la cartella esiste, istruisci FastAPI a servire i file di React
+if os.path.exists(static_path):
+    # Monta i file statici (CSS, JS, immagini)
+    app.mount("/", StaticFiles(directory=static_path, html=True), name="static")
+
+    # Gestisci il "refresh" della pagina per le App React (SPA)
+    @app.exception_handler(404)
+    async def not_found_exception_handler(request, exc):
+        return FileResponse(os.path.join(static_path, "index.html"))
+
 if __name__ == "__main__":
     # Prende la porta dalle variabili d'ambiente di Fly.io o usa la 8080 di default
     port = int(os.getenv("PORT", 8080))
