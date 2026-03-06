@@ -3,7 +3,7 @@ import './App.css';
 import Landing from './Landing';
 
 // Production URL - update if needed
-const API_URL = 'https://jobroom-api.onrender.com/api';
+fetch('/api/auth/password-reset/request')
 
 const STATUSES = ['wanted', 'applied', 'interview', 'offer', 'rejected', 'withdrawn'];
 
