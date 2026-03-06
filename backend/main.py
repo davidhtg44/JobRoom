@@ -6,6 +6,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime, timedelta
 import bcrypt
+import uvicorn
 import random
 import string
 import os
@@ -632,3 +633,10 @@ def delete_application(
 @app.get("/api/statuses")
 def get_statuses():
     return {"statuses": [status.value for status in ApplicationStatus]}
+
+if __name__ == "__main__":
+    # Prende la porta dalle variabili d'ambiente di Fly.io o usa la 8080 di default
+    port = int(os.getenv("PORT", 8080))
+    # 'app' deve coincidere con il nome della variabile FastAPI definita sopra
+    # host '0.0.0.0' è OBBLIGATORIO per Docker/Fly.io
+    uvicorn.run(app, host="0.0.0.0", port=port)
