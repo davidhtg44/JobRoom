@@ -971,3 +971,35 @@ body {
     min-height: 44px;
   }
 }
+body {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* 2. Miglioramento feedback al tocco (evita il colore grigio di default) */
+button:active, .stat-item:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+/* 3. Nascondi la scrollbar della stats-bar ma mantieni lo scroll (più pulito) */
+.stats-bar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+.stats-bar::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari, Opera */
+}
+
+/* 4. Font dinamico per i titoli lunghi */
+.logo h1 {
+  font-size: clamp(0.9rem, 4vw, 1.2rem);
+}
+@media (max-width: 480px) {
+  .mobile-hide {
+    display: none;
+  }
+  .user-actions {
+    display: flex;
+    gap: 5px;
+  }
+}

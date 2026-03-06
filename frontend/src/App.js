@@ -665,13 +665,21 @@ function App() {
           <h1>JobRoom</h1>
         </div>
         <div className="user-menu">
-          <div className="user-info">
-            <div className="user-name">{user.full_name || 'User'}</div>
-            <div className="user-email">{user.email}</div>
-          </div>
-          <button className="btn-secondary btn-sm" onClick={() => setShowSettings(true)}>Settings</button>
-          <button className="btn-logout" onClick={logout}>Logout</button>
-        </div>
+  {/* Nascondiamo le info testuali su schermi molto piccoli per far spazio ai tasti */}
+  <div className="user-info mobile-hide">
+    <div className="user-name">{user.full_name || 'User'}</div>
+    <div className="user-email">{user.email}</div>
+  </div>
+  <div className="user-actions">
+    <button className="btn-secondary btn-sm" onClick={() => setShowSettings(true)}>
+      {/* Usiamo un'icona o testo breve */}
+      ⚙️ <span className="mobile-hide">Settings</span>
+    </button>
+    <button className="btn-logout" onClick={logout}>
+      Logout
+    </button>
+  </div>
+</div>
       </header>
 
       <main className="main-content">
