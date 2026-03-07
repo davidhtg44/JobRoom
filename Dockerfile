@@ -1,8 +1,9 @@
-# 1. COSTRUZIONE FRONTEND (React)
-FROM node:18 AS build-frontend
+# 1. COSTRUZIONE FRONTEND (Usa Node 16 per ARMv6)
+FROM node:16-alpine AS frontend-builder
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm install
+# Su Pi Zero, npm install è pesantissimo: usiamo questa opzione per risparmiare RAM
+RUN npm install --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build
 
@@ -10,18 +11,20 @@ RUN npm run build
 FROM python:3.9-slim
 WORKDIR /app
 
-# Installazione dipendenze Python
+# Installa le dipendenze di sistema per SQLite e Python
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY backend/requirements.txt ./backend/
 RUN pip install --no-cache-dir -r backend/requirements.txt
 
-# Copia del codice backend
 COPY backend/ ./backend/
 
-# Copia della build di React
-# Questa riga sposta i file di React dove Python può vederli
-COPY --from=build-frontend /app/frontend/build ./backend/static
+# Copia la build di React dove Python può vederla
+COPY --from=frontend-builder /app/frontend/build ./backend/static
 
-# Variabili d'ambiente (CORRETTE)
+# Variabili d'ambiente
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8080
 

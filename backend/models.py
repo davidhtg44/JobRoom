@@ -8,7 +8,8 @@ import os
 # Database URL - configurable for production
 # For Fly.io: sqlite:////app/data/job_applications.db
 # For local development: sqlite:///./job_applications.db
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////app/data/job_applications.db")
+# Nota: usiamo 4 barre per un percorso assoluto: sqlite:////
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////data/job_applications.db")
 
 engine = create_engine(
     DATABASE_URL,
