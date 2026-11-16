@@ -15,7 +15,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
 from jose import JWTError, jwt
-from models import get_db, JobApplication, User, ApplicationStatus, VerificationCode, PasswordResetCode
+from models import get_db, JobApplication, User, ApplicationStatus, VerificationCode, PasswordResetCode, Base, engine
 
 # Load environment variables from .env file
 load_dotenv()
@@ -44,6 +44,11 @@ app.add_middleware(
 )
 
 security = HTTPBearer()
+
+
+@app.on_event("startup")
+def startup_event():
+    Base.metadata.create_all(bind=engine)
 
 
 def verify_password(plain_password, hashed_password):
@@ -189,7 +194,7 @@ def send_password_reset_email(email: str, code: str):
         print(f"📧 Reset email sent to {email}")
         return True
     except Exception as e:
-        print(f"❌ Reset email error: {e}")
+        print(f"❌ Reset email error: {str(e)}")
         return True
 
 
@@ -284,6 +289,26 @@ class PasswordResetVerify(BaseModel):
 
 
 # Job Application Pydantic models
+class JobApplicationResponse(BaseModel):
+    id: int
+    user_id: int
+    company_name: str
+    position_title: str
+    job_url: Optional[str] = None
+    status: str
+    location: Optional[str] = None
+    salary_range: Optional[str] = None
+    notes: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    date_applied: Optional[datetime] = None
+    date_created: datetime
+    date_updated: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
 class JobApplicationCreate(BaseModel):
     company_name: str
     position_title: str
@@ -310,16 +335,6 @@ class JobApplicationUpdate(BaseModel):
     date_applied: Optional[datetime] = None
 
 
-class JobApplicationResponse(JobApplicationCreate):
-    id: int
-    user_id: int
-    date_created: datetime
-    date_updated: datetime
-
-    class Config:
-        from_attributes = True
-
-
 # Auth endpoints
 @app.post("/api/auth/register", response_model=dict)
 def register_init(user_data: UserRegister, db: Session = Depends(get_db)):
@@ -330,7 +345,7 @@ def register_init(user_data: UserRegister, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
     
     # Generate and store verification code
-    code = generate_verification_code()
+    code = ''.join(random.choices(string.digits, k=6))
     expires_at = datetime.utcnow() + timedelta(minutes=15)
     
     # Remove any existing unused codes for this email
@@ -380,7 +395,7 @@ def register_verify(data: UserRegisterVerify, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
     
     # Create user
-    hashed_password = get_password_hash(data.password)
+    hashed_password = bcrypt.hashpw(data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     new_user = User(
         email=data.email,
         password_hash=hashed_password,
@@ -411,6 +426,8 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == credentials.email).first()
     if not user or not verify_password(credentials.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    if not user.is_verified:
+        raise HTTPException(status_code=400, detail="Email non verificata. Controlla la tua casella di posta per completare la registrazione.")
     
     access_token = create_access_token(data={"sub": user.email})
     
@@ -435,7 +452,7 @@ def update_profile(
     update_data = user_update.model_dump(exclude_unset=True)
     
     if "password" in update_data and update_data["password"]:
-        current_user.password_hash = get_password_hash(update_data["password"])
+        current_user.password_hash = bcrypt.hashpw(update_data["password"].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         del update_data["password"]
     
     for key, value in update_data.items():
@@ -454,7 +471,7 @@ def resend_code(email: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already verified")
 
     # Generate new code
-    code = generate_verification_code()
+    code = ''.join(random.choices(string.digits, k=6))
     expires_at = datetime.utcnow() + timedelta(minutes=15)
 
     # Invalidate old codes
@@ -491,7 +508,7 @@ def request_password_reset(data: PasswordResetRequest, db: Session = Depends(get
         return {"message": "If the email exists, a reset code has been sent"}
     
     # Generate reset code
-    code = generate_verification_code()
+    code = ''.join(random.choices(string.digits, k=6))
     expires_at = datetime.utcnow() + timedelta(minutes=15)
     
     # Invalidate old reset codes
@@ -536,7 +553,7 @@ def verify_password_reset(data: PasswordResetVerify, db: Session = Depends(get_d
         raise HTTPException(status_code=400, detail="Code expired")
     
     # Update password
-    user.password_hash = get_password_hash(data.new_password)
+    user.password_hash = bcrypt.hashpw(data.new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     
     # Mark code as used
     reset_code.is_used = True

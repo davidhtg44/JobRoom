@@ -42,6 +42,7 @@ class User(Base):
     
     applications = relationship("JobApplication", back_populates="user", cascade="all, delete-orphan")
     verification_codes = relationship("VerificationCode", back_populates="user", cascade="all, delete-orphan")
+    password_reset_codes = relationship("PasswordResetCode", back_populates="user", cascade="all, delete-orphan")
 
 
 class VerificationCode(Base):
@@ -69,7 +70,7 @@ class PasswordResetCode(Base):
     expires_at = Column(DateTime, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    user = relationship("User")
+    user = relationship("User", back_populates="password_reset_codes")
 
 
 class JobApplication(Base):
