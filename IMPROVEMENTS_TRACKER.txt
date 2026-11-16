@@ -1,0 +1,116 @@
+# JobRoom Project Improvements Tracker
+
+## Date Started: 2024
+
+## Master List of Identified Improvements
+
+### 1. Security & Auth (Backend)
+- [x] Strengthen password policies (min length, complexity)
+- [x] Add rate limiting on auth endpoints
+- [ ] Improve JWT token handling (refresh tokens, shorter expiry)
+- [ ] Secure email verification flow (prevent enumeration)
+- [ ] Secure password reset flow (prevent enumeration)
+- [x] Add proper CORS configuration (restrict origins)
+- [x] Add security headers (Helmet equivalent for FastAPI)
+- [x] Input validation/sanitization on all endpoints
+- [x] Add request size limits
+- [ ] Secure cookie flags for session management
+
+### 2. Chrome Extension Extraction Reliability
+- [ ] Update CSS selectors for LinkedIn (frequent DOM changes)
+- [ ] Update CSS selectors for Indeed
+- [ ] Update CSS selectors for Glassdoor
+- [ ] Add more job board support (Greenhouse, Lever, Workday, etc.)
+- [ ] Handle anti-bot detection / dynamic content
+- [ ] Improve salary parsing accuracy
+- [ ] Improve location parsing accuracy
+- [ ] Reduce false positives in generic extractor
+- [ ] Add fallback extraction strategies
+- [ ] Add extraction confidence scoring
+
+### 3. Frontend UX & Styling
+- [ ] Add loading states and skeletons
+- [ ] Add error boundaries
+- [ ] Improve form validation (client-side)
+- [ ] Enhance accessibility (ARIA labels, focus management)
+- [ ] Refine responsive design breakpoints
+- [ ] Add better state management for auth views
+- [ ] Improve mobile touch targets (44px minimum)
+- [ ] Add toast notifications for actions
+- [ ] Optimize bundle size
+- [ ] Add keyboard navigation support
+
+### 4. Deployment & DevOps
+- [ ] Set up CI/CD pipeline (GitHub Actions)
+- [ ] Separate dev/prod environment variables
+- [x] Add health check endpoints
+- [ ] Optimize Docker layers (multi-stage builds)
+- [ ] Configure HTTPS/SSL properly
+- [ ] Minimize frontend bundle size
+- [ ] Add database migration strategy
+- [ ] Configure proper logging in production
+- [ ] Add monitoring/alerting
+- [ ] Set up automated backups
+
+### 5. Error Handling & Logging
+- [ ] Replace generic try/catch with structured error classes
+- [ ] Add user-friendly error messages
+- [ ] Implement centralized error handling in backend
+- [ ] Integrate structured logging (JSON format)
+- [ ] Add request/response logging
+- [ ] Add error tracking (Sentry integration ready)
+- [ ] Add frontend error boundary
+- [ ] Standardize API error response format
+
+### 6. Code Organization & Maintainability
+- [ ] Modularize backend routes/services/models
+- [ ] Add Python type hints throughout
+- [ ] Enable ESLint/Prettier for frontend
+- [ ] Extract utility functions
+- [ ] Add unit tests for critical paths
+- [ ] Add integration tests for API endpoints
+- [ ] Add E2E tests (Cypress/Playwright)
+- [ ] Document API with OpenAPI/Swagger
+
+### 7. Security Headers & CSP
+- [x] Add CSP meta tags
+- [ ] Secure cookie flags (HttpOnly, Secure, SameSite)
+- [ ] Validate input sanitization (XSS prevention)
+- [x] Add rate limiting middleware
+- [ ] Implement CSRF protection where needed
+
+### 8. Testing Coverage
+- [ ] Unit tests for auth logic
+- [ ] Integration tests for API endpoints
+- [ ] E2E tests for login/application flows
+- [ ] Extension extraction tests
+- [ ] Visual regression tests
+
+### 9. Performance Optimization
+- [ ] Code-splitting and lazy loading
+- [ ] Image optimization
+- [ ] API response caching
+- [ ] Database query optimization (indexes)
+- [ ] Select only needed fields in queries
+- [ ] Frontend bundle analysis
+
+---
+
+## Completed Improvements Log
+
+| Date | Improvement Area | Files Modified | Description |
+|------|-----------------|----------------|-------------|
+| 1 | Security & Auth (Backend) | backend/main.py, backend/requirements.txt | Restricted CORS to env-configured origins, added password policy (8+ chars, upper/lower/digit), in-memory rate limiting on auth endpoints, security headers middleware, 1MB request body limit, /api/health endpoint, EmailStr validation, fixed user_id flush bug in register/verify and user_id=0 bug in resend-code |
+
+---
+
+## Next Steps Priority Order
+1. Security & Auth (Backend) - Highest impact
+2. Chrome Extension Extraction - User-facing feature
+3. Frontend UX - User retention
+4. Error Handling & Logging - Observability
+5. Deployment & DevOps - Reliability
+6. Code Organization - Maintainability
+7. Testing - Quality assurance
+8. Performance - Optimization
+9. Security Headers - Defense in depth
