@@ -50,6 +50,16 @@ function extractJobData() {
     return extractDice();
   } else if (hostname.includes('angel.co') || hostname.includes('wellfound')) {
     return extractAngelList();
+  } else if (hostname.includes('adzuna')) {
+    return extractAdzuna();
+  } else if (hostname.includes('stepstone')) {
+    return extractStepStone();
+  } else if (hostname.includes('totaljobs')) {
+    return extractTotalJobs();
+  } else if (hostname.includes('jobstreet')) {
+    return extractJobStreet();
+  } else if (hostname.includes(' SEEK') || hostname.includes('seek')) {
+    return extractSeek();
   } else {
     return extractGeneric();
   }
@@ -258,7 +268,9 @@ function extractGoogleJobs() {
         data.salary = formatSalary(json.baseSalary);
         if (data.salary) confidence += 10;
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Failed to parse structured data:', e);
+    }
   }
   
   if (!data.company) {
@@ -579,7 +591,7 @@ function extractDice() {
   if (data.location) confidence += 20;
   
   data.salary = extractSalary(document.body.innerText);
-  if (data.salary) confidence += 10.
+  if (data.salary) confidence += 10;
   
   data.notes = `Source: Dice | Saved: ${new Date().toLocaleDateString()}`;
   data.confidence = Math.min(confidence, 100);
@@ -599,12 +611,202 @@ function extractAngelList() {
   if (data.company) confidence += 25;
   
   data.location = getText(['.location', '.job-location', '[class*="Location"]', '[class*="location"]']).trim().substring(0, 100);
-  if (data.location) confidence += 20.
+  if (data.location) confidence += 20;
   
   data.salary = extractSalary(document.body.innerText);
-  if (data.salary) confidence += 10.
+  if (data.salary) confidence += 10;
   
   data.notes = `Source: Wellfound | Saved: ${new Date().toLocaleDateString()}`;
+  data.confidence = Math.min(confidence, 100);
+  
+  return data;
+}
+
+// Adzuna
+function extractAdzuna() {
+  const data = { company: '', position: '', location: '', url: window.location.href, salary: '', notes: '', confidence: 0 };
+  let confidence = 0;
+  
+  data.position = getText([
+    'h1.job-title',
+    '.job-title',
+    'h1',
+    'title',
+    '[class*="title"]'
+  ]).trim().substring(0, 150);
+  if (data.position) confidence += 30;
+  
+  data.company = getText([
+    '.company-name',
+    '.employer',
+    '[class*="company"]',
+    'a[href*="/company/"]'
+  ]).trim().substring(0, 100);
+  if (data.company) confidence += 25;
+  
+  data.location = getText([
+    '.location',
+    '.job-location',
+    '[class*="location"]'
+  ]).trim().substring(0, 100);
+  if (data.location) confidence += 20;
+  
+  data.salary = extractSalary(document.body.innerText);
+  if (data.salary) confidence += 10;
+  
+  data.notes = `Source: Adzuna | Saved: ${new Date().toLocaleDateString()}`;
+  data.confidence = Math.min(confidence, 100);
+  
+  return data;
+}
+
+// StepStone
+function extractStepStone() {
+  const data = { company: '', position: '', location: '', url: window.location.href, salary: '', notes: '', confidence: 0 };
+  let confidence = 0;
+  
+  data.position = getText([
+    'h1.job-title',
+    '.job-title',
+    'h1',
+    'title',
+    '[class*="title"]'
+  ]).trim().substring(0, 150);
+  if (data.position) confidence += 30;
+  
+  data.company = getText([
+    '.company-name',
+    '.employer',
+    '[class*="company"]',
+    'a[href*="/company/"]'
+  ]).trim().substring(0, 100);
+  if (data.company) confidence += 25;
+  
+  data.location = getText([
+    '.location',
+    '.job-location',
+    '[class*="location"]'
+  ]).trim().substring(0, 100);
+  if (data.location) confidence += 20;
+  
+  data.salary = extractSalary(document.body.innerText);
+  if (data.salary) confidence += 10;
+  
+  data.notes = `Source: StepStone | Saved: ${new Date().toLocaleDateString()}`;
+  data.confidence = Math.min(confidence, 100);
+  
+  return data;
+}
+
+// TotalJobs
+function extractTotalJobs() {
+  const data = { company: '', position: '', location: '', url: window.location.href, salary: '', notes: '', confidence: 0 };
+  let confidence = 0;
+  
+  data.position = getText([
+    'h1.job-title',
+    '.job-title',
+    'h1',
+    'title',
+    '[class*="title"]'
+  ]).trim().substring(0, 150);
+  if (data.position) confidence += 30;
+  
+  data.company = getText([
+    '.company-name',
+    '.employer',
+    '[class*="company"]',
+    'a[href*="/company/"]'
+  ]).trim().substring(0, 100);
+  if (data.company) confidence += 25;
+  
+  data.location = getText([
+    '.location',
+    '.job-location',
+    '[class*="location"]'
+  ]).trim().substring(0, 100);
+  if (data.location) confidence += 20;
+  
+  data.salary = extractSalary(document.body.innerText);
+  if (data.salary) confidence += 10;
+  
+  data.notes = `Source: TotalJobs | Saved: ${new Date().toLocaleDateString()}`;
+  data.confidence = Math.min(confidence, 100);
+  
+  return data;
+}
+
+// JobStreet
+function extractJobStreet() {
+  const data = { company: '', position: '', location: '', url: window.location.href, salary: '', notes: '', confidence: 0 };
+  let confidence = 0;
+  
+  data.position = getText([
+    'h1.job-title',
+    '.job-title',
+    'h1',
+    'title',
+    '[class*="title"]'
+  ]).trim().substring(0, 150);
+  if (data.position) confidence += 30;
+  
+  data.company = getText([
+    '.company-name',
+    '.employer',
+    '[class*="company"]',
+    'a[href*="/company/"]'
+  ]).trim().substring(0, 100);
+  if (data.company) confidence += 25;
+  
+  data.location = getText([
+    '.location',
+    '.job-location',
+    '[class*="location"]'
+  ]).trim().substring(0, 100);
+  if (data.location) confidence += 20;
+  
+  data.salary = extractSalary(document.body.innerText);
+  if (data.salary) confidence += 10;
+  
+  data.notes = `Source: JobStreet | Saved: ${new Date().toLocaleDateString()}`;
+  data.confidence = Math.min(confidence, 100);
+  
+  return data;
+}
+
+// SEEK
+function extractSeek() {
+  const data = { company: '', position: '', location: '', url: window.location.href, salary: '', notes: '', confidence: 0 };
+  let confidence = 0;
+  
+  data.position = getText([
+    'h1.job-title',
+    '.job-title',
+    'h1',
+    'title',
+    '[class*="title"]'
+  ]).trim().substring(0, 150);
+  if (data.position) confidence += 30;
+  
+  data.company = getText([
+    '.company-name',
+    '.employer',
+    '[class*="company"]',
+    'a[href*="/company/"]'
+  ]).trim().substring(0, 100);
+  if (data.company) confidence += 25;
+  
+  data.location = getText([
+    '.location',
+    '.job-location',
+    '[class*="location"]'
+  ]).trim().substring(0, 100);
+  if (data.location) confidence += 20;
+  
+  data.salary = extractSalary(document.body.innerText);
+  if (data.salary) confidence += 10;
+  
+  data.notes = `Source: SEEK | Saved: ${new Date().toLocaleDateString()}`;
   data.confidence = Math.min(confidence, 100);
   
   return data;
@@ -668,7 +870,9 @@ function extractGeneric() {
           confidence += 10;
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Failed to parse structured data in generic extractor:', e);
+    }
   }
   
   // Try common selectors as last resort
@@ -773,7 +977,9 @@ function extractSalary(text) {
     /(\$[\d,]+(?:\.\d{2})?\s*(?:k|K)?\s*(?:per hour|\/hr|hourly))/i,
     /(?:salary|compensation|pay|rate)[:\s]*(\$[^\n.]{5,40})/i,
     /(?:range|between)\s*(\$[\d,]+[^\n.]{10,50})/i,
-    /(\$[\d,]+(?:\.\d{2})?\s*(?:k|K)?\s*[-–]\s*\$?[\d,]+(?:\.\d{2})?\s*(?:k|K)?)/i
+    /(\$[\d,]+(?:\.\d{2})?\s*(?:k|K)?\s*[-–]\s*\$?[\d,]+(?:\.\d{2})?\s*(?:k|K)?)/i,
+    /€[\d,]+(?:\.\d{2})?\s*(?:k|K)?\s*[-–to]+\s*€?[\d,]+(?:\.\d{2})?\s*(?:k|K)?/i,
+    /£[\d,]+(?:\.\d{2})?\s*(?:k|K)?\s*[-–to]+\s*£?[\d,]+(?:\.\d{2})?\s*(?:k|K)?/i
   ];
   
   for (const pattern of patterns) {

@@ -111,6 +111,10 @@ body {
   box-shadow: 0 0 0 3px rgba(26, 26, 46, 0.1);
 }
 
+.auth-form input[aria-invalid="true"] {
+  border-color: #dc2626;
+}
+
 .auth-btn {
   width: 100%;
   padding: 1rem;
@@ -131,6 +135,11 @@ body {
 
 .auth-btn:active {
   transform: scale(0.98);
+}
+
+.auth-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .auth-btn-secondary {
@@ -162,6 +171,35 @@ body {
   cursor: pointer;
   text-decoration: underline;
   padding: 0.5rem;
+}
+
+.auth-back {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: #667eea;
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: underline;
+  padding: 0.25rem;
+}
+
+.form-hint {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 1rem;
+}
+
+.field-error {
+  display: block;
+  color: #dc2626;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
 }
 
 /* Header - Mobile First */
@@ -360,6 +398,11 @@ body {
   transform: scale(0.95);
 }
 
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Form Panel */
 .form-panel {
   padding: 1rem;
@@ -404,6 +447,10 @@ body {
   outline: none;
   border-color: #1a1a2e;
   box-shadow: 0 0 0 3px rgba(26, 26, 46, 0.08);
+}
+
+.form-group input[aria-invalid="true"] {
+  border-color: #dc2626;
 }
 
 .form-actions {
@@ -799,6 +846,159 @@ body {
   border-top: 1px solid #e2e8f0;
 }
 
+/* Toast Notifications */
+.toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 400px;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease-out;
+  font-size: 0.9rem;
+}
+
+.toast-success {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.toast-error {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+
+.toast-info {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #93c5fd;
+}
+
+.toast-icon {
+  font-size: 1.1rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  flex: 1;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.toast-close:hover {
+  opacity: 1;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Loading Skeleton */
+.loading-skeleton {
+  padding: 1rem;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.skeleton-header {
+  height: 2rem;
+  width: 40%;
+}
+
+.skeleton-line {
+  height: 1rem;
+  width: 100%;
+}
+
+.skeleton-line.short {
+  width: 60%;
+}
+
+.skeleton-card {
+  height: 8rem;
+  width: 100%;
+  margin-top: 1.5rem;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Error Boundary */
+.error-boundary {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f7fa;
+  padding: 1rem;
+}
+
+.error-boundary-content {
+  text-align: center;
+  max-width: 500px;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.error-boundary-content h2 {
+  color: #1a1a2e;
+  margin-bottom: 1rem;
+}
+
+.error-boundary-content p {
+  color: #64748b;
+  margin-bottom: 1.5rem;
+}
+
 /* Responsive - Mobile First - Table to Cards */
 @media (max-width: 768px) {
   .data-table thead {
@@ -863,13 +1063,11 @@ body {
     margin-bottom: 0.25rem;
   }
 
-  /* Hide less important columns on small screens */
   .data-table td[data-label="Location"],
   .data-table td[data-label="Applied"] {
     font-size: 0.8rem;
   }
 
-  /* Action buttons stack on mobile */
   .data-table td:last-child {
     flex-direction: row;
     flex-wrap: wrap;
@@ -886,7 +1084,6 @@ body {
     font-size: 1rem;
   }
 
-  /* Hide user info on small mobile, show only icon buttons */
   .user-info {
     display: none;
   }
@@ -960,6 +1157,13 @@ body {
   .empty-state-text {
     font-size: 0.9rem;
   }
+
+  .toast-container {
+    top: 0.5rem;
+    right: 0.5rem;
+    left: 0.5rem;
+    max-width: none;
+  }
 }
 
 /* Landscape Mobile */
@@ -1024,7 +1228,7 @@ body {
   .form-group select,
   .form-group textarea {
     min-height: 44px;
-    font-size: 16px; /* Prevents zoom on iOS */
+    font-size: 16px;
   }
 
   .data-table td {
@@ -1048,8 +1252,6 @@ body {
 }
 
 /* Additional Mobile Optimizations */
-
-/* Touch feedback for interactive elements */
 button:active, 
 .stat-item:active,
 [data-role="button"]:active {
@@ -1057,7 +1259,6 @@ button:active,
   opacity: 0.9;
 }
 
-/* Hide scrollbar for stats-bar but keep scroll functionality */
 .stats-bar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -1067,12 +1268,10 @@ button:active,
   display: none;
 }
 
-/* Dynamic font sizing for long titles */
 .logo h1 {
   font-size: clamp(0.9rem, 4vw, 1.2rem);
 }
 
-/* Mobile hide utility class */
 @media (max-width: 480px) {
   .mobile-hide {
     display: none;

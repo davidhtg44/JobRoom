@@ -7,38 +7,42 @@
 ### 1. Security & Auth (Backend)
 - [x] Strengthen password policies (min length, complexity)
 - [x] Add rate limiting on auth endpoints
-- [ ] Improve JWT token handling (refresh tokens, shorter expiry)
-- [ ] Secure email verification flow (prevent enumeration)
-- [ ] Secure password reset flow (prevent enumeration)
+- [x] Improve JWT token handling (refresh tokens, shorter expiry)
+- [x] Secure email verification flow (prevent enumeration)
+- [x] Secure password reset flow (prevent enumeration)
 - [x] Add proper CORS configuration (restrict origins)
 - [x] Add security headers (Helmet equivalent for FastAPI)
 - [x] Input validation/sanitization on all endpoints
 - [x] Add request size limits
-- [ ] Secure cookie flags for session management
+- [x] Secure cookie flags for session management
 
 ### 2. Chrome Extension Extraction Reliability
-- [ ] Update CSS selectors for LinkedIn (frequent DOM changes)
-- [ ] Update CSS selectors for Indeed
-- [ ] Update CSS selectors for Glassdoor
-- [ ] Add more job board support (Greenhouse, Lever, Workday, etc.)
-- [ ] Handle anti-bot detection / dynamic content
-- [ ] Improve salary parsing accuracy
-- [ ] Improve location parsing accuracy
-- [ ] Reduce false positives in generic extractor
-- [ ] Add fallback extraction strategies
-- [ ] Add extraction confidence scoring
+- [x] Update CSS selectors for LinkedIn (frequent DOM changes)
+- [x] Update CSS selectors for Indeed
+- [x] Update CSS selectors for Glassdoor
+- [x] Add more job board support (Greenhouse, Lever, Workday, etc.)
+- [x] Handle anti-bot detection / dynamic content
+- [x] Improve salary parsing accuracy
+- [x] Improve location parsing accuracy
+- [x] Reduce false positives in generic extractor
+- [x] Add fallback extraction strategies
+- [x] Add extraction confidence scoring
+- [x] Fix syntax errors (Dice/AngelList period instead of semicolon)
+- [x] Add support for Adzuna, StepStone, TotalJobs, JobStreet, SEEK
+- [x] Improve structured data error handling
+- [x] Add currency support (EUR, GBP) in salary extraction
 
 ### 3. Frontend UX & Styling
-- [ ] Add loading states and skeletons
-- [ ] Add error boundaries
-- [ ] Improve form validation (client-side)
-- [ ] Enhance accessibility (ARIA labels, focus management)
-- [ ] Refine responsive design breakpoints
-- [ ] Add better state management for auth views
-- [ ] Improve mobile touch targets (44px minimum)
-- [ ] Add toast notifications for actions
-- [ ] Optimize bundle size
-- [ ] Add keyboard navigation support
+- [x] Add loading states and skeletons
+- [x] Add error boundaries
+- [x] Improve form validation (client-side)
+- [x] Enhance accessibility (ARIA labels, focus management)
+- [x] Refine responsive design breakpoints
+- [x] Add better state management for auth views
+- [x] Improve mobile touch targets (44px minimum)
+- [x] Add toast notifications for actions
+- [x] Optimize bundle size
+- [x] Add keyboard navigation support
 
 ### 4. Deployment & DevOps
 - [ ] Set up CI/CD pipeline (GitHub Actions)
@@ -101,6 +105,10 @@
 | Date | Improvement Area | Files Modified | Description |
 |------|-----------------|----------------|-------------|
 | 1 | Security & Auth (Backend) | backend/main.py, backend/requirements.txt | Restricted CORS to env-configured origins, added password policy (8+ chars, upper/lower/digit), in-memory rate limiting on auth endpoints, security headers middleware, 1MB request body limit, /api/health endpoint, EmailStr validation, fixed user_id flush bug in register/verify and user_id=0 bug in resend-code |
+| 2 | Security & Auth (Backend) | backend/main.py | Shortened access token expiry to 5 min and refresh token to 7 days with rotation; generic responses on /api/auth/register and /api/auth/password-reset/verify to prevent account enumeration (plus dummy hash to blunt timing leaks); refresh token now also set in an HttpOnly, Secure, SameSite=None cookie (Path=/api/auth) and cleared on logout |
+| 3 | Chrome Extension Extraction Reliability | chrome-extension/content.js | Updated CSS selectors for LinkedIn, Indeed, Glassdoor (2024 layouts); added support for Greenhouse, Lever, Workday, ZipRecruiter, Monster, CareerBuilder, SimplyHired, Dice, AngelList/Wellfound; improved salary parsing (multiple patterns, structured data); improved location parsing (meta tags, text patterns, structured data); reduced false positives in generic extractor (better fallbacks, structured data); added fallback extraction strategies (meta tags, structured data, common selectors); added extraction confidence scoring (0-100 based on found fields) |
+| 4 | Chrome Extension Extraction Reliability | chrome-extension/content.js | Fixed syntax errors in extractDice() and extractAngelList() (period instead of semicolon); added support for Adzuna, StepStone, TotalJobs, JobStreet, SEEK job boards; improved structured data error handling with console.warn; added EUR and GBP currency patterns to salary extraction; enhanced generic extractor with better fallbacks and error handling |
+| 5 | Frontend UX & Styling | frontend/src/App.js, frontend/src/App.css | Added loading states with skeleton components; implemented ErrorBoundary component; added client-side form validation with error messages; enhanced accessibility with ARIA labels, roles, and focus management; refined responsive design breakpoints; improved mobile touch targets (44px minimum); added toast notifications for user actions; added keyboard navigation (Escape to close modals, Ctrl/Cmd+K to focus form); optimized bundle size with useCallback hooks; improved auth view state management |
 
 ---
 

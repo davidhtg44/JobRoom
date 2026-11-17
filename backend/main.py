@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse
@@ -63,6 +63,12 @@ REFRESH_SECRET_KEY = os.getenv("REFRESH_SECRET_KEY", SECRET_KEY)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 5
 REFRESH_TOKEN_EXPIRE_DAYS = 7
+
+# Refresh token cookie settings (defense in depth: token also returned in body
+# so existing clients keep working; the cookie is HttpOnly/Secure/SameSite=None)
+REFRESH_COOKIE_NAME = "jobroom_refresh"
+REFRESH_COOKIE_MAX_AGE = REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+REFRESH_COOKIE_PATH = "/api/auth"
 
 # Gmail SMTP settings
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
@@ -235,6 +241,29 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+
+def set_refresh_cookie(response: Response, token: str) -> None:
+    """Store the refresh token in an HttpOnly, Secure, SameSite=None cookie."""
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=token,
+        max_age=REFRESH_COOKIE_MAX_AGE,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path=REFRESH_COOKIE_PATH,
+    )
+
+
+def clear_refresh_cookie(response: Response) -> None:
+    """Remove the refresh token cookie on logout."""
+    response.delete_cookie(
+        key=REFRESH_COOKIE_NAME,
+        path=REFRESH_COOKIE_PATH,
+        secure=True,
+        samesite="none",
+    )
 
 
 def send_verification_email(email: str, code: str) -> bool:
@@ -571,10 +600,13 @@ def register_init(request: Request, user_data: UserRegister, db: Session = Depen
     # Normalize email
     email = user_data.email.lower().strip()
 
-    # Check if user exists
+    # Check if user exists (generic response to prevent account enumeration)
     existing_user = db.query(User).filter(User.email == email).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        return {
+            "message": "If the email is not yet registered, a verification code has been sent",
+            "email": email
+        }
 
     # Generate and store verification code
     code = generate_verification_code()
@@ -600,13 +632,13 @@ def register_init(request: Request, user_data: UserRegister, db: Session = Depen
     send_verification_email(email, code)
 
     return {
-        "message": "Verification code sent to email",
+        "message": "If the email is not yet registered, a verification code has been sent",
         "email": email
     }
 
 
 @app.post("/api/auth/register/verify", response_model=TokenResponse, tags=["auth"])
-def register_verify(request: Request, data: UserRegisterVerify, db: Session = Depends(get_db)):
+def register_verify(request: Request, data: UserRegisterVerify, response: Response, db: Session = Depends(get_db)):
     """Complete registration with verification code"""
     # Rate limit
     if is_rate_limited(rate_limit_key(request, "register_verify")):
@@ -659,6 +691,9 @@ def register_verify(request: Request, data: UserRegisterVerify, db: Session = De
     access_token = create_access_token(data={"sub": new_user.email})
     refresh_token = create_refresh_token(data={"sub": new_user.email})
 
+    # Also store refresh token in a secure cookie
+    set_refresh_cookie(response, refresh_token)
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -668,7 +703,7 @@ def register_verify(request: Request, data: UserRegisterVerify, db: Session = De
 
 
 @app.post("/api/auth/login", response_model=TokenResponse, tags=["auth"])
-def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db)):
+def login(request: Request, credentials: UserLogin, response: Response, db: Session = Depends(get_db)):
     # Rate limit
     if is_rate_limited(rate_limit_key(request, "login")):
         raise HTTPException(status_code=429, detail="Too many login attempts. Please try again later.")
@@ -683,6 +718,9 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
     access_token = create_access_token(data={"sub": user.email})
     refresh_token = create_refresh_token(data={"sub": user.email})
 
+    # Also store refresh token in a secure cookie
+    set_refresh_cookie(response, refresh_token)
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -692,7 +730,7 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
 
 
 @app.post("/api/auth/refresh", response_model=dict, tags=["auth"])
-def refresh_token(request: Request, data: RefreshTokenRequest):
+def refresh_token(request: Request, data: RefreshTokenRequest, response: Response):
     """Issue a new access token using a valid refresh token"""
     # Rate limit
     if is_rate_limited(rate_limit_key(request, "refresh")):
@@ -707,13 +745,18 @@ def refresh_token(request: Request, data: RefreshTokenRequest):
     revoke_refresh_token(data.refresh_token)
     new_access_token = create_access_token(data={"sub": email})
     new_refresh_token = create_refresh_token(data={"sub": email})
+
+    # Rotate the secure cookie as well
+    set_refresh_cookie(response, new_refresh_token)
+
     return {"access_token": new_access_token, "refresh_token": new_refresh_token, "token_type": "bearer"}
 
 
 @app.post("/api/auth/logout", response_model=dict, tags=["auth"])
-def logout(data: RefreshTokenRequest):
+def logout(data: RefreshTokenRequest, response: Response):
     """Revoke refresh token"""
     revoke_refresh_token(data.refresh_token)
+    clear_refresh_cookie(response)
     return {"message": "Logged out successfully"}
 
 
@@ -838,7 +881,9 @@ def verify_password_reset(request: Request, data: PasswordResetVerify, db: Sessi
     email = data.email.lower().strip()
     user = db.query(User).filter(User.email == email).first()
     if not user:
-        raise HTTPException(status_code=400, detail="Invalid request")
+        # Do dummy work to blunt timing differences, then return a generic error
+        get_password_hash("dummy-timing-equalizer")
+        raise HTTPException(status_code=400, detail="Invalid or expired code")
 
     # Find valid reset code
     reset_code = db.query(PasswordResetCode).filter(
