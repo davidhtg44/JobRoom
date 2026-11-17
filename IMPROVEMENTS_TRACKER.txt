@@ -43,6 +43,10 @@
 - [x] Add toast notifications for actions
 - [x] Optimize bundle size
 - [x] Add keyboard navigation support
+- [x] Add night mode
+- [x] Do the interface more professional removing useless or repetitive boxes or parts
+- [x] Add a section where are listed all most famous job platforms (with logos) and the user can browse there based on the location
+- [x] The font of the page must be professional
 
 ### 4. Deployment & DevOps
 - [ ] Set up CI/CD pipeline (GitHub Actions)
@@ -109,6 +113,7 @@
 | 3 | Chrome Extension Extraction Reliability | chrome-extension/content.js | Updated CSS selectors for LinkedIn, Indeed, Glassdoor (2024 layouts); added support for Greenhouse, Lever, Workday, ZipRecruiter, Monster, CareerBuilder, SimplyHired, Dice, AngelList/Wellfound; improved salary parsing (multiple patterns, structured data); improved location parsing (meta tags, text patterns, structured data); reduced false positives in generic extractor (better fallbacks, structured data); added fallback extraction strategies (meta tags, structured data, common selectors); added extraction confidence scoring (0-100 based on found fields) |
 | 4 | Chrome Extension Extraction Reliability | chrome-extension/content.js | Fixed syntax errors in extractDice() and extractAngelList() (period instead of semicolon); added support for Adzuna, StepStone, TotalJobs, JobStreet, SEEK job boards; improved structured data error handling with console.warn; added EUR and GBP currency patterns to salary extraction; enhanced generic extractor with better fallbacks and error handling |
 | 5 | Frontend UX & Styling | frontend/src/App.js, frontend/src/App.css | Added loading states with skeleton components; implemented ErrorBoundary component; added client-side form validation with error messages; enhanced accessibility with ARIA labels, roles, and focus management; refined responsive design breakpoints; improved mobile touch targets (44px minimum); added toast notifications for user actions; added keyboard navigation (Escape to close modals, Ctrl/Cmd+K to focus form); optimized bundle size with useCallback hooks; improved auth view state management |
+| 6 | Frontend UX & Styling | frontend/src/App.js, frontend/src/App.css, frontend/src/Landing.js, frontend/src/Landing.css | Added night mode with dark theme toggle (persisted in localStorage); removed dead social links footer section for cleaner interface; added "Browse Top Job Platforms" section to landing page with region-based filtering and platform logo badges; ensured Inter font is used throughout for professional typography |
 
 ---
 

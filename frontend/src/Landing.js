@@ -1,7 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './Landing.css';
 
+const JOB_PLATFORMS = [
+  { name: 'LinkedIn', url: 'https://www.linkedin.com/jobs', color: '#0A66C2', initials: 'in', region: 'global' },
+  { name: 'Indeed', url: 'https://www.indeed.com', color: '#2557A7', initials: 'in', region: 'global' },
+  { name: 'Glassdoor', url: 'https://www.glassdoor.com/index.htm', color: '#0CAA41', initials: 'gd', region: 'global' },
+  { name: 'Google Jobs', url: 'https://www.google.com/search?q=jobs', color: '#4285F4', initials: 'G', region: 'global' },
+  { name: 'Greenhouse', url: 'https://www.greenhouse.io', color: '#24A47B', initials: 'gh', region: 'global' },
+  { name: 'Lever', url: 'https://www.lever.co', color: '#1A1A2E', initials: 'L', region: 'global' },
+  { name: 'Workday', url: 'https://www.workday.com', color: '#F48120', initials: 'wd', region: 'global' },
+  { name: 'ZipRecruiter', url: 'https://www.ziprecruiter.com', color: '#E8604C', initials: 'zr', region: 'us' },
+  { name: 'Monster', url: 'https://www.monster.com', color: '#E3183D', initials: 'm', region: 'global' },
+  { name: 'Wellfound', url: 'https://wellfound.com', color: '#FF6B6B', initials: 'wf', region: 'global' },
+  { name: 'Dice', url: 'https://www.dice.com', color: '#E31837', initials: 'd', region: 'us' },
+  { name: 'Adzuna', url: 'https://www.adzuna.com', color: '#5A9BD5', initials: 'a', region: 'uk' },
+];
+
+const REGIONS = [
+  { id: 'all', label: 'All Regions' },
+  { id: 'global', label: 'Global / Remote' },
+  { id: 'us', label: 'United States' },
+  { id: 'uk', label: 'UK & Europe' },
+];
+
 function Landing({ onGetStarted }) {
+  const [activeRegion, setActiveRegion] = useState('all');
+
+  const filteredPlatforms = activeRegion === 'all'
+    ? JOB_PLATFORMS
+    : JOB_PLATFORMS.filter(p => p.region === 'global' || p.region === activeRegion);
+
   return (
     <div className="landing-page">
       {/* Navigation */}
@@ -13,6 +41,7 @@ function Landing({ onGetStarted }) {
           <div className="nav-links">
             <a href="#features">Features</a>
             <a href="#how-it-works">How It Works</a>
+            <a href="#platforms">Platforms</a>
             <a href="https://github.com/davidhtg44/JobRoom" target="_blank" rel="noopener noreferrer">GitHub</a>
             <button className="btn btn-nav" onClick={onGetStarted}>Sign In</button>
           </div>
@@ -154,6 +183,47 @@ function Landing({ onGetStarted }) {
         </div>
       </section>
 
+      {/* Job Platforms Section */}
+      <section id="platforms" className="platforms">
+        <div className="section-container">
+          <h2 className="section-title">Browse Top Job Platforms</h2>
+          <p className="section-subtitle">Find your next role on the platforms recruiters use most</p>
+          
+          <div className="region-filters" role="group" aria-label="Filter platforms by region">
+            {REGIONS.map(region => (
+              <button
+                key={region.id}
+                className={`region-filter ${activeRegion === region.id ? 'active' : ''}`}
+                onClick={() => setActiveRegion(region.id)}
+                aria-pressed={activeRegion === region.id}
+              >
+                {region.label}
+              </button>
+            ))}
+          </div>
+          
+          <div className="platforms-grid">
+            {filteredPlatforms.map(platform => (
+              <a
+                key={platform.name}
+                href={platform.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="platform-card"
+              >
+                <div className="platform-logo" style={{ background: platform.color }} aria-hidden="true">
+                  {platform.initials}
+                </div>
+                <div className="platform-info">
+                  <h3>{platform.name}</h3>
+                  <span className="platform-link">Browse Jobs →</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="cta">
         <div className="cta-content">
@@ -180,6 +250,7 @@ function Landing({ onGetStarted }) {
               <h4>Product</h4>
               <a href="#features">Features</a>
               <a href="#how-it-works">How It Works</a>
+              <a href="#platforms">Platforms</a>
               <a href="https://github.com/davidhtg44/JobRoom" target="_blank" rel="noopener noreferrer">GitHub</a>
             </div>
             

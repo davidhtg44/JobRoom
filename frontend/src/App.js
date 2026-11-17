@@ -140,6 +140,9 @@ function App() {
     password: '',
     confirm_password: ''
   });
+  const [darkMode, setDarkMode] = useState(() => {
+    try { return localStorage.getItem('darkMode') === 'true'; } catch { return false; }
+  });
 
   // Toast management
   const addToast = useCallback((message, type = 'info') => {
@@ -169,6 +172,12 @@ function App() {
       });
     }
   }, [user]);
+
+  // Apply theme
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    try { localStorage.setItem('darkMode', darkMode); } catch {}
+  }, [darkMode]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -941,6 +950,14 @@ function App() {
             <h1>JobRoom</h1>
           </div>
           <div className="user-menu">
+            <button 
+              className="btn-secondary btn-sm theme-toggle" 
+              onClick={() => setDarkMode(!darkMode)} 
+              title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {darkMode ? '☀️' : '🌙'}
+            </button>
             <div className="user-info">
               <div className="user-name">{user.full_name || 'User'}</div>
               <div className="user-email">{user.email}</div>
@@ -1234,14 +1251,6 @@ function App() {
                 <li><a href="mailto:jobroom.info@gmail.com">Contact Us</a></li>
                 <li><a href="#" onClick={(e) => { e.preventDefault(); setShowLegal('faq'); }}>FAQ</a></li>
               </ul>
-            </div>
-            <div className="footer-section">
-              <h4>Connect</h4>
-              <div className="footer-social">
-                <a href="#" title="GitHub">🐙</a>
-                <a href="#" title="Twitter">🐦</a>
-                <a href="#" title="LinkedIn">💼</a>
-              </div>
             </div>
           </div>
           <div className="footer-bottom">
