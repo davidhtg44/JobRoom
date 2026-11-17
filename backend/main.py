@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse
 from fastapi.exception_handlers import http_exception_handler as fastapi_http_exception_handler
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -60,8 +61,8 @@ if not logger.handlers:
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 REFRESH_SECRET_KEY = os.getenv("REFRESH_SECRET_KEY", SECRET_KEY)
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 15
-REFRESH_TOKEN_EXPIRE_DAYS = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 5
+REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 # Gmail SMTP settings
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
