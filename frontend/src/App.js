@@ -6,6 +6,31 @@ const API_URL = '/api';
 
 const STATUSES = ['wanted', 'applied', 'interview', 'offer', 'rejected', 'withdrawn'];
 
+const STATUS_LABELS = {
+  wanted: 'Wanted',
+  applied: 'Applied',
+  interview: 'Interview',
+  offer: 'Offer',
+  rejected: 'Rejected',
+  withdrawn: 'Withdrawn',
+};
+
+const getStatusLabel = (status) => STATUS_LABELS[status] || status.charAt(0).toUpperCase() + status.slice(1);
+
+const getErrorMessage = async (response, fallback) => {
+  try {
+    const data = await response.json();
+    return data.detail || fallback;
+  } catch {
+    try {
+      const text = await response.text();
+      return text || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+};
+
 // Toast notification component
 function Toast({ message, type, onClose }) {
   useEffect(() => {
@@ -73,6 +98,36 @@ function LoadingSkeleton() {
   );
 }
 
+// Confirmation Modal component
+function ConfirmModal({ isOpen, title, message, onConfirm, onCancel, confirmText = 'Delete', confirmVariant = 'danger' }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onCancel} role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2 id="confirm-title">{title}</h2>
+          <button className="btn-close" onClick={onCancel} aria-label="Close dialog">×</button>
+        </div>
+        <div className="legal-content" style={{ padding: '1.5rem' }}>
+          <p>{message}</p>
+        </div>
+        <div className="form-actions" style={{ padding: '0 1.5rem 1.5rem', borderTop: '1px solid #e2e8f0', marginTop: '1rem' }}>
+          <button 
+            type="button" 
+            className={`btn-primary ${confirmVariant === 'danger' ? 'btn-delete-confirm' : ''}`}
+            onClick={onConfirm}
+            style={{ background: confirmVariant === 'danger' ? '#dc2626' : '#1a1a2e' }}
+          >
+            {confirmText}
+          </button>
+          <button type="button" className="btn-secondary" onClick={onCancel}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Form validation utilities
 const validateEmail = (email) => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -99,6 +154,29 @@ const validateApplicationForm = (data) => {
   return errors;
 };
 
+// Job Platforms Data
+const JOB_PLATFORMS = [
+  { name: 'LinkedIn', url: 'https://www.linkedin.com/jobs', color: '#0A66C2', initials: 'in', region: 'global' },
+  { name: 'Indeed', url: 'https://www.indeed.com', color: '#2557A7', initials: 'in', region: 'global' },
+  { name: 'Glassdoor', url: 'https://www.glassdoor.com/index.htm', color: '#0CAA41', initials: 'gd', region: 'global' },
+  { name: 'Google Jobs', url: 'https://www.google.com/search?q=jobs', color: '#4285F4', initials: 'G', region: 'global' },
+  { name: 'Greenhouse', url: 'https://www.greenhouse.io', color: '#24A47B', initials: 'gh', region: 'global' },
+  { name: 'Lever', url: 'https://www.lever.co', color: '#1A1A2E', initials: 'L', region: 'global' },
+  { name: 'Workday', url: 'https://www.workday.com', color: '#F48120', initials: 'wd', region: 'global' },
+  { name: 'ZipRecruiter', url: 'https://www.ziprecruiter.com', color: '#E8604C', initials: 'zr', region: 'us' },
+  { name: 'Monster', url: 'https://www.monster.com', color: '#E3183D', initials: 'm', region: 'global' },
+  { name: 'Wellfound', url: 'https://wellfound.com', color: '#FF6B6B', initials: 'wf', region: 'global' },
+  { name: 'Dice', url: 'https://www.dice.com', color: '#E31837', initials: 'd', region: 'us' },
+  { name: 'Adzuna', url: 'https://www.adzuna.com', color: '#5A9BD5', initials: 'a', region: 'uk' },
+];
+
+const REGIONS = [
+  { id: 'all', label: 'All Regions' },
+  { id: 'global', label: 'Global / Remote' },
+  { id: 'us', label: 'United States' },
+  { id: 'uk', label: 'UK & Europe' },
+];
+
 function App() {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -109,7 +187,6 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showLegal, setShowLegal] = useState(null);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [formErrors, setFormErrors] = useState({});
   const [toasts, setToasts] = useState([]);
@@ -143,6 +220,11 @@ function App() {
   const [darkMode, setDarkMode] = useState(() => {
     try { return localStorage.getItem('darkMode') === 'true'; } catch { return false; }
   });
+  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, id: null });
+  const [activeRegion, setActiveRegion] = useState('all');
+  const [fetchingUser, setFetchingUser] = useState(false);
+  const [submittingForm, setSubmittingForm] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   // Toast management
   const addToast = useCallback((message, type = 'info') => {
@@ -154,11 +236,31 @@ function App() {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   }, []);
 
-  useEffect(() => {
-    if (token) {
-      fetchUser();
+  // Fetch user - now re-runs when token changes
+  const fetchUser = useCallback(async () => {
+    if (!token) return;
+    setFetchingUser(true);
+    try {
+      const response = await fetch(`${API_URL}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      } else {
+        logout();
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      logout();
+    } finally {
+      setFetchingUser(false);
     }
-  }, []);
+  }, [token]);
+
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
 
   useEffect(() => {
     if (user) {
@@ -187,6 +289,7 @@ function App() {
         if (showSettings) setShowSettings(false);
         if (showLegal) setShowLegal(null);
         if (showForm) resetForm();
+        if (deleteConfirm.isOpen) setDeleteConfirm({ isOpen: false, id: null });
       }
       // Ctrl/Cmd + K to focus search or add new
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -202,27 +305,7 @@ function App() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [showSettings, showLegal, showForm]);
-
-  const fetchUser = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_URL}/auth/me`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-      } else {
-        logout();
-      }
-    } catch (error) {
-      console.error('Error fetching user:', error);
-      logout();
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [showSettings, showLegal, showForm, deleteConfirm.isOpen]);
 
   const fetchApplications = async () => {
     setLoading(true);
@@ -247,7 +330,6 @@ function App() {
     setError('');
     setFormErrors({});
     
-    // Client-side validation
     if (!validateEmail(authData.email)) {
       setFormErrors({ email: 'Please enter a valid email address' });
       return;
@@ -257,7 +339,7 @@ function App() {
       return;
     }
 
-    setLoading(true);
+    setSubmittingForm(true);
     try {
       const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
@@ -273,20 +355,20 @@ function App() {
         addToast(`Verification code sent to ${authData.email}`, 'success');
         setAuthView('verify');
       } else {
-        const errorData = await response.json();
-        setError(errorData.detail || 'Registration failed');
+        const errorMessage = await getErrorMessage(response, 'Registration failed');
+        setError(errorMessage);
       }
     } catch (error) {
       setError('Connection error. Make sure the backend is running.');
     } finally {
-      setLoading(false);
+      setSubmittingForm(false);
     }
   };
 
   const handleRegisterVerify = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
+    setSubmittingForm(true);
     try {
       const response = await fetch(`${API_URL}/auth/register/verify`, {
         method: 'POST',
@@ -307,19 +389,19 @@ function App() {
         setAuthView('login');
         addToast('Account created successfully!', 'success');
       } else {
-        const errorData = await response.json();
-        setError(errorData.detail || 'Verification failed');
+        const errorMessage = await getErrorMessage(response, 'Verification failed');
+        setError(errorMessage);
       }
     } catch (error) {
       setError('Connection error.');
     } finally {
-      setLoading(false);
+      setSubmittingForm(false);
     }
   };
 
   const handleResendCode = async () => {
     setError('');
-    setLoading(true);
+    setSubmittingForm(true);
     try {
       const response = await fetch(`${API_URL}/auth/resend-code?email=${encodeURIComponent(authData.email)}`, {
         method: 'POST'
@@ -327,13 +409,13 @@ function App() {
       if (response.ok) {
         addToast('Verification code resent! Please check your inbox.', 'success');
       } else {
-        const errorData = await response.json();
-        setError(errorData.detail || 'Failed to resend code');
+        const errorMessage = await getErrorMessage(response, 'Failed to resend code');
+        setError(errorMessage);
       }
     } catch (error) {
       setError('Connection error.');
     } finally {
-      setLoading(false);
+      setSubmittingForm(false);
     }
   };
 
@@ -344,7 +426,7 @@ function App() {
       setFormErrors({ email: 'Please enter a valid email address' });
       return;
     }
-    setLoading(true);
+    setSubmittingForm(true);
     try {
       const response = await fetch(`${API_URL}/auth/password-reset/request`, {
         method: 'POST',
@@ -357,13 +439,13 @@ function App() {
           setAuthView('reset');
         }, 2000);
       } else {
-        const errorData = await response.json();
-        setError(errorData.detail || 'Request failed');
+        const errorMessage = await getErrorMessage(response, 'Request failed');
+        setError(errorMessage);
       }
     } catch (error) {
       setError('Connection error.');
     } finally {
-      setLoading(false);
+      setSubmittingForm(false);
     }
   };
 
@@ -380,7 +462,7 @@ function App() {
       return;
     }
     
-    setLoading(true);
+    setSubmittingForm(true);
     try {
       const response = await fetch(`${API_URL}/auth/password-reset/verify`, {
         method: 'POST',
@@ -398,13 +480,13 @@ function App() {
           setAuthData({ ...authData, reset_code: '', new_password: '' });
         }, 2000);
       } else {
-        const errorData = await response.json();
-        setError(errorData.detail || 'Reset failed');
+        const errorMessage = await getErrorMessage(response, 'Reset failed');
+        setError(errorMessage);
       }
     } catch (error) {
       setError('Connection error.');
     } finally {
-      setLoading(false);
+      setSubmittingForm(false);
     }
   };
 
@@ -427,7 +509,7 @@ function App() {
       return;
     }
 
-    setLoading(true);
+    setSubmittingForm(true);
     try {
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
@@ -442,13 +524,13 @@ function App() {
         syncTokenWithExtension(data.access_token);
         addToast('Welcome back!', 'success');
       } else {
-        const errorData = await response.json();
-        setError(errorData.detail || 'Login failed');
+        const errorMessage = await getErrorMessage(response, 'Login failed');
+        setError(errorMessage);
       }
     } catch (error) {
       setError('Connection error. Make sure the backend is running.');
     } finally {
-      setLoading(false);
+      setSubmittingForm(false);
     }
   };
 
@@ -465,7 +547,7 @@ function App() {
       return;
     }
 
-    setLoading(true);
+    setSavingSettings(true);
     try {
       const updateData = {
         full_name: settingsData.full_name || undefined,
@@ -492,21 +574,35 @@ function App() {
         addToast('Profile updated successfully!', 'success');
         setSettingsData({ ...settingsData, password: '', confirm_password: '' });
       } else {
-        const errorData = await response.json();
-        setError(errorData.detail || 'Update failed');
+        const errorMessage = await getErrorMessage(response, 'Update failed');
+        setError(errorMessage);
       }
     } catch (error) {
       setError('Connection error.');
     } finally {
-      setLoading(false);
+      setSavingSettings(false);
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Call backend to revoke refresh token
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (refreshToken) {
+      try {
+        await fetch(`${API_URL}/auth/logout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: refreshToken })
+        });
+      } catch (error) {
+        console.error('Error revoking token:', error);
+      }
+    }
     setToken(null);
     setUser(null);
     setApplications([]);
     localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
     addToast('Logged out successfully', 'info');
   };
 
@@ -515,7 +611,6 @@ function App() {
     setError('');
     setFormErrors({});
     
-    // Validate form
     const errors = validateApplicationForm(formData);
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -540,7 +635,7 @@ function App() {
     if (!submitData.contact_name) delete submitData.contact_name;
     if (!submitData.contact_email) delete submitData.contact_email;
 
-    setLoading(true);
+    setSubmittingForm(true);
     try {
       const response = await fetch(url, {
         method,
@@ -552,8 +647,8 @@ function App() {
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        setError(errorText || 'Error saving application');
+        const errorMessage = await getErrorMessage(response, 'Error saving application');
+        setError(errorMessage);
         return;
       }
       
@@ -564,7 +659,7 @@ function App() {
       console.error('Error:', error);
       setError('Error connecting to server');
     } finally {
-      setLoading(false);
+      setSubmittingForm(false);
     }
   };
 
@@ -586,23 +681,31 @@ function App() {
     setFormErrors({});
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this application?')) {
-      setLoading(true);
-      try {
-        await fetch(`${API_URL}/applications/${id}`, { 
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        fetchApplications();
-        addToast('Application deleted', 'success');
-      } catch (error) {
-        console.error('Error deleting application:', error);
-        addToast('Failed to delete application', 'error');
-      } finally {
-        setLoading(false);
-      }
+  const handleDelete = (id) => {
+    setDeleteConfirm({ isOpen: true, id });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm.id) return;
+    setLoading(true);
+    try {
+      await fetch(`${API_URL}/applications/${deleteConfirm.id}`, { 
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      fetchApplications();
+      addToast('Application deleted', 'success');
+    } catch (error) {
+      console.error('Error deleting application:', error);
+      addToast('Failed to delete application', 'error');
+    } finally {
+      setLoading(false);
+      setDeleteConfirm({ isOpen: false, id: null });
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirm({ isOpen: false, id: null });
   };
 
   const resetForm = () => {
@@ -635,7 +738,6 @@ function App() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    // Clear field error when user types
     if (formErrors[name]) {
       setFormErrors({ ...formErrors, [name]: undefined });
     }
@@ -658,6 +760,10 @@ function App() {
     return acc;
   }, {});
 
+  const filteredPlatforms = activeRegion === 'all'
+    ? JOB_PLATFORMS
+    : JOB_PLATFORMS.filter(p => p.region === 'global' || p.region === activeRegion);
+
   const [showAuth, setShowAuth] = useState(false);
   
   if (!user && !showAuth) {
@@ -678,7 +784,6 @@ function App() {
           </div>
           
           {error && <div className="error-message" role="alert">{error}</div>}
-          {success && <div className="success-message" role="status">{success}</div>}
           
           {authView === 'login' && (
             <form className="auth-form" onSubmit={handleLogin} noValidate>
@@ -721,8 +826,8 @@ function App() {
                   Forgot Password?
                 </button>
               </div>
-              <button type="submit" className="auth-btn" disabled={loading}>
-                {loading ? 'Signing in...' : 'Sign In'}
+              <button type="submit" className="auth-btn" disabled={submittingForm}>
+                {submittingForm ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
           )}
@@ -771,8 +876,8 @@ function App() {
                 />
                 {formErrors.password && <span id="reg-password-error" className="field-error">{formErrors.password}</span>}
               </div>
-              <button type="submit" className="auth-btn" disabled={loading}>
-                {loading ? 'Sending...' : 'Send Verification Code'}
+              <button type="submit" className="auth-btn" disabled={submittingForm}>
+                {submittingForm ? 'Sending...' : 'Send Verification Code'}
               </button>
             </form>
           )}
@@ -795,14 +900,14 @@ function App() {
                   autoComplete="one-time-code"
                 />
               </div>
-              <button type="submit" className="auth-btn" disabled={loading}>
-                {loading ? 'Verifying...' : 'Verify & Create Account'}
+              <button type="submit" className="auth-btn" disabled={submittingForm}>
+                {submittingForm ? 'Verifying...' : 'Verify & Create Account'}
               </button>
               <button
                 type="button"
                 className="auth-btn auth-btn-secondary"
                 onClick={handleResendCode}
-                disabled={loading}
+                disabled={submittingForm}
                 style={{ marginTop: '0.5rem' }}
               >
                 📧 Resend Code
@@ -838,8 +943,8 @@ function App() {
               <p className="form-hint">
                 Enter your email and we'll send you a code to reset your password.
               </p>
-              <button type="submit" className="auth-btn" disabled={loading}>
-                {loading ? 'Sending...' : 'Send Reset Code'}
+              <button type="submit" className="auth-btn" disabled={submittingForm}>
+                {submittingForm ? 'Sending...' : 'Send Reset Code'}
               </button>
               <button
                 type="button"
@@ -889,8 +994,8 @@ function App() {
               <p className="form-hint">
                 Password must be at least 8 characters with uppercase, lowercase, and number.
               </p>
-              <button type="submit" className="auth-btn" disabled={loading}>
-                {loading ? 'Resetting...' : 'Reset Password'}
+              <button type="submit" className="auth-btn" disabled={submittingForm}>
+                {submittingForm ? 'Resetting...' : 'Reset Password'}
               </button>
               <button
                 type="button"
@@ -982,7 +1087,7 @@ function App() {
         </header>
 
         <main className="main-content">
-          {loading && !applications.length ? (
+          {fetchingUser && !applications.length ? (
             <LoadingSkeleton />
           ) : (
             <>
@@ -1064,7 +1169,7 @@ function App() {
                             onChange={handleChange}
                           >
                             {STATUSES.map(s => (
-                              <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                              <option key={s} value={s}>{getStatusLabel(s)}</option>
                             ))}
                           </select>
                         </div>
@@ -1152,8 +1257,8 @@ function App() {
                         </div>
                       </div>
                       <div className="form-actions">
-                        <button type="submit" className="btn-primary" disabled={loading}>
-                          {loading ? 'Saving...' : editingId ? 'Update' : 'Save'} Application
+                        <button type="submit" className="btn-primary" disabled={submittingForm}>
+                          {submittingForm ? 'Saving...' : editingId ? 'Update' : 'Save'} Application
                         </button>
                         <button type="button" className="btn-secondary" onClick={resetForm}>
                           Cancel
@@ -1199,7 +1304,7 @@ function App() {
                             <td data-label="Position">{app.position_title}</td>
                             <td data-label="Status">
                               <span className={`status-badge status-${app.status}`}>
-                                {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                                {getStatusLabel(app.status)}
                               </span>
                             </td>
                             <td data-label="Location">{app.location || '—'}</td>
@@ -1207,7 +1312,7 @@ function App() {
                               {app.date_applied 
                                 ? new Date(app.date_applied).toLocaleDateString('en-US', {
                                     month: 'short', day: 'numeric', year: 'numeric'
-                                  })
+          })
                                 : '—'
                               }
                             </td>
@@ -1220,6 +1325,47 @@ function App() {
                       )}
                     </tbody>
                   </table>
+                </div>
+              </div>
+
+              {/* Job Platforms Section - Added to authenticated view */}
+              <div className="content-card" style={{ marginTop: '1.5rem' }}>
+                <div className="card-header">
+                  <h2>Browse Top Job Platforms</h2>
+                </div>
+                <div className="form-panel" style={{ padding: '1rem' }}>
+                  <div className="region-filters" role="group" aria-label="Filter platforms by region">
+                    {REGIONS.map(region => (
+                      <button
+                        key={region.id}
+                        className={`region-filter ${activeRegion === region.id ? 'active' : ''}`}
+                        onClick={() => setActiveRegion(region.id)}
+                        aria-pressed={activeRegion === region.id}
+                      >
+                        {region.label}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <div className="platforms-grid">
+                    {filteredPlatforms.map(platform => (
+                      <a
+                        key={platform.name}
+                        href={platform.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="platform-card"
+                      >
+                        <div className="platform-logo" style={{ background: platform.color }} aria-hidden="true">
+                          {platform.initials}
+                        </div>
+                        <div className="platform-info">
+                          <h3>{platform.name}</h3>
+                          <span className="platform-link">Browse Jobs →</span>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
                 </div>
               </div>
             </>
@@ -1268,7 +1414,6 @@ function App() {
               </div>
               
               {error && <div className="error-message" role="alert">{error}</div>}
-              {success && <div className="success-message" role="status">{success}</div>}
               
               <form className="settings-form" onSubmit={handleSettingsSave}>
                 <div className="form-group">
@@ -1338,8 +1483,8 @@ function App() {
                   />
                 </div>
                 <div className="form-actions">
-                  <button type="submit" className="btn-primary" disabled={loading}>
-                    {loading ? 'Saving...' : 'Save Changes'}
+                  <button type="submit" className="btn-primary" disabled={savingSettings}>
+                    {savingSettings ? 'Saving...' : 'Save Changes'}
                   </button>
                   <button type="button" className="btn-secondary" onClick={() => setShowSettings(false)}>Cancel</button>
                 </div>
@@ -1515,6 +1660,18 @@ function App() {
               </div>
             </div>
           </div>
+        )}
+
+        {deleteConfirm.isOpen && (
+          <ConfirmModal
+            isOpen={deleteConfirm.isOpen}
+            title="Delete Application"
+            message="Are you sure you want to delete this application? This action cannot be undone."
+            onConfirm={confirmDelete}
+            onCancel={cancelDelete}
+            confirmText="Delete"
+            confirmVariant="danger"
+          />
         )}
       </div>
     </ErrorBoundary>

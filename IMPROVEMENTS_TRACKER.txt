@@ -127,3 +127,25 @@
 7. Testing - Quality assurance
 8. Performance - Optimization
 9. Security Headers - Defense in depth
+
+---
+
+## Frontend/src/App.js - Identified Issues (Point 3 Deep Dive)
+
+### 1. Interface Professionalism / Broken & Repetitive Parts
+- **Footer legal links are broken**: Privacy, Terms, and Cookies links in the authenticated footer all call `onGetStarted()` (which opens the auth modal) instead of `setShowLegal('privacy')`, `setShowLegal('terms')`, `setShowLegal('cookies')`. Clicking "Privacy" shows the sign-in card rather than the Privacy Policy modal.
+- **Dead code**: `success` state is declared (`const [success, setSuccess] = useState('')`) but `setSuccess` is never called anywhere in the component.
+- **Visual repetition**: Multiple nested card-like containers (`.auth-card`, `.content-card`, `.form-panel`, `.modal-content`) create redundant visual hierarchy without clear purpose.
+
+### 2. Missing "Browse Top Job Platforms" Section in Authenticated View
+- The job-platforms section with logos and region-based filtering exists only in `Landing.js` (unauthenticated landing page). It is **completely absent from `App.js`**, so authenticated users cannot browse platforms from the main dashboard interface.
+
+### 3. Font Professionalism
+- **Status: OK** — Inter font is correctly imported in `App.css` and applied to `body` via `font-family: 'Inter', ...`. No issue found.
+
+### Additional Code-Quality Issues in App.js
+- **Stale `fetchUser` effect**: The effect has an empty dependency array `[]`, so it never re-runs if the token changes after mount (partially mitigated by direct `setUser` calls after login, but fragile).
+- **Logout does not revoke server-side token**: `logout()` only clears local state; it does **not** call the backend `/api/auth/logout` endpoint to revoke the refresh token.
+- **Error handling reads raw text**: `handleSubmit` reads non-OK responses as plain text (`await response.text()`) instead of parsing JSON, so backend error details are displayed raw/unfriendly.
+- **Deletion uses native confirm**: `handleDelete` uses `window.confirm()` instead of a custom accessible modal.
+- **Shared `loading` state conflates concerns**: The single `loading` state is used for data fetching, form submission, and settings saving, which can incorrectly show loading skeletons during unrelated actions.

@@ -121,3 +121,54 @@
 
 # 2026-11-17 16:21:34.949938
 +N
+
+# 2026-11-17 16:24:33.645324
++/clear
+
+# 2026-11-17 16:30:36.797891
++Now just focus on point 3 and check again the last three points and correct them, work just in the file frontend/src/App.js
+
+# 2026-11-17 16:49:33.387440
++Y
+
+# 2026-11-17 16:50:01.314702
++what did you do in the last prompt, why you created a new file?
+
+# 2026-11-17 16:57:55.187781
++Yes try to correct frontend/src/App.js
+
+# 2026-11-17 17:07:37.353097
++N
+
+# 2026-11-17 17:07:59.813834
++/clear
+
+# 2026-11-17 17:10:27.456692
++Now just focus on point 3 and check again the last three point (you have to look in frontend/src/App.js) don't modify the file, just make a list of what's wrong on the code. Just give me out the list with all the thing that are wrong.
+
+# 2026-11-17 17:17:47.080008
++okay, as next step write this list of things that are wrong in IMPROVEMENTS_TRACKER.txt as a new section at the end of the file and after that stop.
+
+# 2026-11-17 17:21:15.115165
++/cl
+
+# 2026-11-17 17:22:52.363961
++Work only on the file frontend/src/App.js and follo the instructions on IMPROVEMENTS_TRACKER.txt that are in the end of the page (## Frontend/src/App.js - Identified Issues (Point 3 Deep Dive)). Try to work directly on this points without working on any other problem or file.
+
+# 2026-11-17 17:48:41.907764
++respond directly, why did yu stopped before?
+
+# 2026-11-18 10:15:22.871916
++Yes work on frontend/src/App.js and fix the problems you described
+
+# 2026-11-18 10:40:52.452847
++N
+
+# 2026-11-18 10:40:57.740647
++/clear
+
+# 2026-11-18 10:41:38.276862
++try to fix the file frontend/src/App.js and to improve the code
+
+# 2026-11-18 10:45:53.398055
++what did you do in the last prompt, just answear to this question
